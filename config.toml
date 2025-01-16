@@ -1,0 +1,22 @@
+[server]
+ip = "127.0.0.1"
+port = 8080
+
+# [routes]
+# submit = "/submit"
+# index = "/index"
+# image = "/image"
+
+[paths]
+phish_page = "./frontend/index.html"
+redirect_url = "https://google.com"
+
+[smtp]
+server = "smtp.126.com"
+username = "xxx@126.com"
+from_email = "Test <xxx@126.com>"
+subject = "Test Subject"
+interval = 5
+
+[email]
+template = "template.html"

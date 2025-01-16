@@ -1,0 +1,12 @@
+[workspace]
+members = [
+    "client",
+    "server", 
+    "common"
+]
+
+[workspace.metadata]
+output-directory = "bin"
+
+[profile.release]
+panic = "abort"
