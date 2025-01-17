@@ -83,17 +83,11 @@ pub struct Server {
     pub port: u16,
 }
 
-// #[derive(Debug, Clone, Deserialize)]
-// pub struct Routes {
-//     pub submit: String,
-//     pub index: String,
-//     pub image: String,
-// }
-
 #[derive(Debug, Clone, Deserialize)]
 pub struct Paths {
     pub phish_page: String,
     pub redirect_url: String,
+    pub success_page: String,
 }
 
 impl Config {

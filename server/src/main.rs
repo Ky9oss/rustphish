@@ -75,6 +75,7 @@ async fn main() -> io::Result<()> {
             .route("/submit", web::post().to(handle_post))
             .route(&index_path, web::get().to(handle_index))
             .route(&image_path, web::get().to(handle_image))
+            .route("/success", web::get().to(handle_success))
     })
     .bind(&bind_addr).map_err(|e| {
         log::error!("Failed to bind server to {}: {}", bind_addr, e);
@@ -310,4 +311,16 @@ async fn handle_image(
     HttpResponse::Ok()
         .content_type("image/gif")
         .body(transparent_pixel)
+}
+
+async fn handle_success(
+    config: web::Data<Config>
+) -> HttpResponse {
+    match fs::read_to_string(&config.paths.success_page) {
+        Ok(content) => HttpResponse::Ok().content_type("text/html").body(content),
+        Err(e) => {
+            log::error!("Failed to read success page: {}", e);
+            HttpResponse::InternalServerError().body("Error loading page")
+        }
+    }
 }
