@@ -72,17 +72,26 @@
 ```
 
 ### 配置文件
-- `server.ip`：0.0.0.0
-- `server.port`：服务端端口
-- `paths.phish_page`：仿冒页面路径
-- `paths.redirect_url`：提交成功后，重定向的url
-- `paths.success_page`：路由`/success`下的成功页面路径，可以用于`paths.redirect_url`重定向
-- `smtp.server`：smtp服务器地址
-- `smtp.username`：smtp服务器用户名
-- `smtp.from_email`：发件人邮箱
-- `smtp.subject`：邮件主题
-- `smtp.interval`：每封邮件间隔时间
-- `email.template`：邮件模板路径
+```toml
+[server]
+ip = "0.0.0.0" #服务端监听ip
+port = 8080 #服务端端口
+
+[paths]
+phish_page = "./frontend/test.html" #仿冒页面路径
+redirect_url = "http://localhost:8080/success" #提交成功后，重定向的url
+success_page = "./frontend/success.html" #路由`/success`下的成功页面路径，可以用于`paths.redirect_url`重定向
+
+[smtp]
+server = "smtp.126.com" #smtp服务器地址
+username = "xxx@126.com" #smtp服务器用户名
+from_email = "Test <xxx@126.com>" #发件人邮箱
+subject = "Test Subject" #邮件主题
+interval = 5 #每封邮件间隔时间
+
+[email]
+template = "template.html" #邮件模板路径
+```
 
 # 编译
 ```bash

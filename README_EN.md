@@ -41,7 +41,7 @@ A lightweight, high-performance advanced phishing tool with client-server separa
 
 ## Notes
 ### Phishing Page
-> It's recommended to use `form` and `input` tags for submission, ensuring the `post` package is submitted to the server's `/submit` endpoint
+> It's recommended to use `form` and `input` tags for submission, ensuring the `post` package is submitted to the server's `{{submit}}` endpoint
 Below is a minimized phishing page template, modify as needed:
 ```html
 <!DOCTYPE html>
@@ -51,7 +51,7 @@ Below is a minimized phishing page template, modify as needed:
 </head>
 <body>
     <!-- Important part -->
-    <form action="/submit" method="post">
+    <form action="{{submit}}" method="post">
         <input type="text" name="key1" value="value1"><br>
         <input type="text" name="key2" value="value2"><br>
         <input type="text" name="key3" value="value3"><br>
