@@ -27,7 +27,7 @@
 
 # 使用方法
 ## 搭建服务器
-1. 修改`config.toml`，配置服务端监听端口、数据库路径、smtp服务器信息等
+1. 修改`config.toml`，配置服务端监听端口、数据库路径、smtp服务器信息等，详情见[配置文件](#配置文件)
 2. 修改`frontend/index.html`，配置仿冒页面，详情见[仿冒页面](#仿冒页面)
 3. 运行`./server`，启动服务端
 4. 所有信息自动记录进`./database`数据库，该数据库只能使用客户端软件读取：`./client.exe --read ./database`
@@ -35,7 +35,7 @@
 ## 使用客户端
 1. `./client.exe --input xxx.txt`: 导入邮箱
 2. `./client.exe --show`: 确认邮箱成功导入
-3. 修改配置文件`config.toml`，配置每封邮件的间隔时间、发信人、主题等信息
+3. 修改配置文件`config.toml`，配置每封邮件的间隔时间、发信人、主题等信息，详情见[配置文件](#配置文件)
 4. 修改邮件模板文件`template.html`，配置邮件内容，详情见[邮件模板](#邮件模板)
 5. `./client.exe --send-all`: 发送所有钓鱼邮件
 
@@ -70,6 +70,19 @@
 <img src="http://ip:port/image/{{id}}" alt=""> <!-- 用于记录受害者是否打开邮件 -->
 </body></html>
 ```
+
+### 配置文件
+- `server.ip`：0.0.0.0
+- `server.port`：服务端端口
+- `paths.phish_page`：仿冒页面路径
+- `paths.redirect_url`：提交成功后，重定向的url
+- `paths.success_page`：路由`/success`下的成功页面路径，可以用于`paths.redirect_url`重定向
+- `smtp.server`：smtp服务器地址
+- `smtp.username`：smtp服务器用户名
+- `smtp.from_email`：发件人邮箱
+- `smtp.subject`：邮件主题
+- `smtp.interval`：每封邮件间隔时间
+- `email.template`：邮件模板路径
 
 # 编译
 ```bash

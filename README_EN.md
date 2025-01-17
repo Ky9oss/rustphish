@@ -27,7 +27,7 @@ A lightweight, high-performance advanced phishing tool with client-server separa
 
 # Usage
 ## Server Setup
-1. Modify `config.toml` to configure server listening port, database path, SMTP server information, etc.
+1. Modify `config.toml` to configure server listening port, database path, SMTP server information, etc., see [Configuration File](#configuration-file) for details
 2. Modify `frontend/index.html` to configure the phishing page, see [Phishing Page](#phishing-page) for details
 3. Run `./server` to start the server
 4. All information is automatically recorded in the `./database`, which can only be read using the client software: `./client.exe --read ./database`
@@ -35,7 +35,7 @@ A lightweight, high-performance advanced phishing tool with client-server separa
 ## Client Usage
 1. `./client.exe --input xxx.txt`: Import email addresses
 2. `./client.exe --show`: Confirm successful email import
-3. Modify `config.toml` to configure email interval, sender, subject, etc.
+3. Modify `config.toml` to configure email interval, sender, subject, etc., see [Configuration File](#configuration-file) for details
 4. Modify `template.html` to configure email content, see [Email Template](#email-template) for details
 5. `./client.exe --send-all`: Send all phishing emails
 
@@ -90,3 +90,16 @@ cargo build --release -p server
 - [x] Generate phishing emails using templates and victim info
 - [x] Read server database, format and display all phishing information
 - [x] Send emails via SMTP through other email platforms 
+
+### Configuration File
+- `server.ip`: 0.0.0.0
+- `server.port`: Server listening port
+- `paths.phish_page`: Path to phishing page
+- `paths.redirect_url`: URL to redirect after successful submission
+- `paths.success_page`: Path to success page under `/success` route, can be used as `paths.redirect_url`
+- `smtp.server`: SMTP server address
+- `smtp.username`: SMTP server username
+- `smtp.from_email`: Sender's email address
+- `smtp.subject`: Email subject
+- `smtp.interval`: Interval between each email
+- `email.template`: Path to email template 
