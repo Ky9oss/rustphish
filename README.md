@@ -41,7 +41,7 @@
 
 ## 注意事项
 ### 仿冒页面
-> 建议使用`form`和`input`标签完成提交功能，确保`post`包提交到服务器的`/submit`接口
+> 建议使用`form`和`input`标签完成提交功能，确保`post`包提交到服务器的`{{submit}}`接口
 请下方为最简化的仿冒页面，根据需要自行修改
 ```html
 <!DOCTYPE html>
@@ -51,7 +51,7 @@
 </head>
 <body>
     <!-- 重要部分 -->
-    <form action="/submit" method="post">
+    <form action="{{submit}}" method="post">
         <input type="text" name="key1"><br>
         <input type="text" name="key2"><br>
         <input type="text" name="key3"><br>
