@@ -2,4 +2,7 @@
 /.vimspector.json
 /database
 /test_db_operations
+/frontend/test.html
+/email_database
+/input.txt
 

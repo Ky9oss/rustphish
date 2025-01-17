@@ -3,8 +3,8 @@ ip = "127.0.0.1"
 port = 8080
 
 [paths]
-phish_page = "./frontend/index.html"
-redirect_url = "https://google.com"
+phish_page = "./frontend/test.html"
+redirect_url = "http://localhost:8080/success"
 success_page = "./frontend/success.html"
 
 [smtp]

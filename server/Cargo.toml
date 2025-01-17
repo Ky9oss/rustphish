@@ -33,6 +33,7 @@ sled = "0.34.7"
 # rustls = { version = "0.23", default-features = false, features = ["ring", "tls12", "std"]}
 chrono = "0.4.39"
 common = { path = "../common" }
+urlencoding = "2.1.0"
 
 
 [features]

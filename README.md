@@ -52,9 +52,9 @@
 <body>
     <!-- 重要部分 -->
     <form action="/submit" method="post">
-        <input type="text" name="key1" value="value1"><br>
-        <input type="text" name="key2" value="value2"><br>
-        <input type="text" name="key3" value="value3"><br>
+        <input type="text" name="key1"><br>
+        <input type="text" name="key2"><br>
+        <input type="text" name="key3"><br>
         <button type="submit">Submit</button>
     </form>
 </body>

