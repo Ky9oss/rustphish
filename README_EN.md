@@ -14,7 +14,16 @@
 
 English | [简体中文](./README.md)
 
-A lightweight, high-performance advanced phishing tool with client-server separation, designed to replace `gophish`
+A lightweight, high-performance phishing email drill tool with client-server separation, designed to replace `gophish`
+
+# Disclaimer
+This tool is only intended for **legally authorized** enterprise security construction activities. If you need to test the availability of this tool, please set up your own target machine environment.
+
+When using this tool for testing, you should ensure that the behavior complies with local laws and regulations and that sufficient authorization has been obtained. **Do not conduct phishing against unauthorized targets.**
+
+If you engage in any illegal behavior while using this tool, you will need to bear the corresponding consequences yourself, and we will not bear any legal or joint liability.
+
+Before installing and using this tool, please **carefully read and fully understand the content of each clause**. Limitations, disclaimers, or other clauses involving your significant rights may be highlighted in bold, underlined, or other forms to draw your attention. Unless you have fully read, completely understood, and accepted all terms of this agreement, please do not install and use this tool. Your use of the tool or your acceptance of this agreement in any other express or implied manner shall be deemed that you have read and agreed to be bound by this agreement.
 
 # Quick Start
 ```bash
@@ -45,9 +54,14 @@ Download `client` and `server` from the `Releases` section on the right side of 
 5. `./client.exe --send-all`: Send all phishing emails
 
 ## Using Client to Read Database Records
-1. `./client.exe --read ./database`: Read database records (or use `client_read`)
+1. Ensure the `email_database` file contains the corresponding victim email information and IDs, confirm with `client.exe --show`
+2. `./client.exe --read ./database`: Read database records (or use `client_read`)
 
 ## Notes
+### Important Files
+- `email_database`: Contains victim email information and IDs, recorded when initially importing emails with `--input`. After sending phishing emails, do not delete this file or use `--delete` to remove emails, otherwise database records cannot be read. This file can be copied, backed up, and replaced in other clients' same-named files for reading database records
+- `database`: Server database, do not delete this file after sending phishing emails, otherwise victim access records cannot be read. Recommended to backup
+
 ### Phishing Page
 > It's recommended to use `form` and `input` tags for submission, ensuring the `post` package is submitted to the server's `{{submit}}` endpoint
 Below is a minimized phishing page template, modify as needed:
