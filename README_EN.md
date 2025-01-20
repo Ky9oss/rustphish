@@ -26,18 +26,26 @@ A lightweight, high-performance advanced phishing tool with client-server separa
 ![](img/4.png)
 
 # Usage
+## Download
+Download `client` and `server` from the `Releases` section on the right side of Github according to your operating system environment
+> `client_read` is a minimally compiled client that only reads databases and doesn't support sending emails. It's designed for scenarios where database files in internal networks are inconvenient to transfer out. This file can be transferred to internal servers for direct database record decryption
+> `client_all` is the complete client that supports sending emails
+
 ## Server Setup
 1. Modify `config.toml` to configure server listening port, database path, SMTP server information, etc., see [Configuration File](#configuration-file) for details
 2. Modify `frontend/index.html` to configure the phishing page, see [Phishing Page](#phishing-page) for details
 3. Run `./server` to start the server
 4. All information is automatically recorded in the `./database`, which can only be read using the client software: `./client.exe --read ./database`
 
-## Client Usage
+## Using Client to Send Phishing Emails
 1. `./client.exe --input xxx.txt`: Import email addresses
 2. `./client.exe --show`: Confirm successful email import
 3. Modify `config.toml` to configure email interval, sender, subject, etc., see [Configuration File](#configuration-file) for details
 4. Modify `template.html` to configure email content, see [Email Template](#email-template) for details
 5. `./client.exe --send-all`: Send all phishing emails
+
+## Using Client to Read Database Records
+1. `./client.exe --read ./database`: Read database records (or use `client_read`)
 
 ## Notes
 ### Phishing Page
@@ -52,9 +60,9 @@ Below is a minimized phishing page template, modify as needed:
 <body>
     <!-- Important part -->
     <form action="{{submit}}" method="post">
-        <input type="text" name="key1" value="value1"><br>
-        <input type="text" name="key2" value="value2"><br>
-        <input type="text" name="key3" value="value3"><br>
+        <input type="text" name="key1"><br>
+        <input type="text" name="key2"><br>
+        <input type="text" name="key3"><br>
         <button type="submit">Submit</button>
     </form>
 </body>
@@ -71,9 +79,32 @@ Click the link below to complete the test: <a href="http://ip:port/index/{{id}}"
 </body></html>
 ```
 
+### Configuration File
+```toml
+[server]
+ip = "0.0.0.0" #Server listening IP
+port = 8080 #Server port
+
+[paths]
+phish_page = "./frontend/test.html" #Path to phishing page
+redirect_url = "http://localhost:8080/success" #URL to redirect after successful submission
+success_page = "./frontend/success.html" #Path to success page under `/success` route, can be used as `paths.redirect_url`
+
+[smtp]
+server = "smtp.126.com" #SMTP server address
+username = "xxx@126.com" #SMTP server username
+from_email = "Test <xxx@126.com>" #Sender's email address
+subject = "Test Subject" #Email subject
+interval = 5 #Interval between each email
+
+[email]
+template = "template.html" #Path to email template
+```
+
 # Compilation
 ```bash
-cargo build --release -p client
+cargo build --release -p client --features db
+cargo build --release -p client --all-features
 cargo build --release -p server
 ```
 
@@ -90,16 +121,3 @@ cargo build --release -p server
 - [x] Generate phishing emails using templates and victim info
 - [x] Read server database, format and display all phishing information
 - [x] Send emails via SMTP through other email platforms 
-
-### Configuration File
-- `server.ip`: 0.0.0.0
-- `server.port`: Server listening port
-- `paths.phish_page`: Path to phishing page
-- `paths.redirect_url`: URL to redirect after successful submission
-- `paths.success_page`: Path to success page under `/success` route, can be used as `paths.redirect_url`
-- `smtp.server`: SMTP server address
-- `smtp.username`: SMTP server username
-- `smtp.from_email`: Sender's email address
-- `smtp.subject`: Email subject
-- `smtp.interval`: Interval between each email
-- `email.template`: Path to email template 

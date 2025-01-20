@@ -1,12 +1,21 @@
 use std::error::Error;
+use clap::{Command, Arg};
+use colored::*;
 use std::fs::{self, create_dir_all};
 use std::path::Path;
 use std::thread;
 use std::time::Duration;
-use clap::{Command, Arg};
-use colored::*;
 use serde::Deserialize;
-use rpassword::read_password;
+#[cfg(feature = "mail")]
+use {
+    rpassword::read_password,
+};
+
+#[cfg(feature = "mail")]
+mod smtp;
+
+#[cfg(feature = "db")]
+mod db;
 
 #[derive(Deserialize)]
 struct Config {
@@ -28,8 +37,8 @@ struct EmailConfig {
     template: String,  // 邮件模板路径
 }
 
-mod db;
-mod smtp;
+// mod db;
+// mod smtp;
 
 const BANNER: &str = r#"
 ██████╗ ██╗   ██╗███████╗████████╗██████╗ ██╗  ██╗██╗███████╗██╗  ██╗
@@ -76,6 +85,7 @@ fn generate_phishing_emails(email_tree: &sled::Tree, template_path: &str) -> Res
     Ok(())
 }
 
+#[cfg(feature = "mail")]
 async fn send_phishing_emails(email_tree: &sled::Tree, config: Config, password: String) -> Result<(), Box<dyn Error>> {
     let emails = db::get_all_emails(&email_tree)?;
 
@@ -155,6 +165,7 @@ fn show_all_emails(email_tree: &sled::Tree) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+#[cfg(feature = "mail")]
 async fn send_single_email(
     email_tree: &sled::Tree,
     config: &Config,
@@ -206,198 +217,221 @@ async fn send_single_email(
 fn main() -> Result<(), Box<dyn Error>> {
     println!("{}", BANNER.bright_cyan());
 
-    // 定义常用字符串
+    #[cfg(feature = "db")]
     const DB_PATH: &str = "email_database";
+    #[cfg(feature = "db")]
     const EMAIL_TREE: &str = "emails";
 
-    let matches = Command::new("Rustphish Client")
+    let mut app = Command::new("Rustphish Client")
         .version("1.0")
         .author("Ky9oss")
-        .about("轻量级邮件钓鱼工具")
-        .arg(Arg::new("read")
-            .short('r')
-            .long("read")
-            .value_name("DATABASE")
-            .help("读取并格式化显示钓鱼记录"))
-        .arg(Arg::new("input")
-            .short('i')
-            .long("input")
-            .value_name("EMAIL_LIST")
-            .help("从文件导入目标邮箱列表"))
-        .arg(Arg::new("generate")
-            .short('g')
-            .long("generate")
-            .value_name("TEMPLATE")
-            .help("根据模板生成钓鱼邮件"))
-        .arg(Arg::new("send-all")
-            .long("send-all")
-            .help("向所有目标发送钓鱼邮件")
-            .num_args(0))
-        .arg(Arg::new("send")
-            .long("send")
-            .value_name("ID")
-            .help("向指定ID的目标发送钓鱼邮件"))
-        .arg(Arg::new("show")
-            // .short('s')
-            .long("show")
-            .help("显示所有目标邮箱")
-            .num_args(0))
-        .arg(Arg::new("delete")
-            .short('d')
-            .long("delete")
-            .value_name("ID")
-            .help("删除指定ID的邮箱记录"))
-        .get_matches();
+        .about("轻量级邮件钓鱼工具");
 
-    if let Some(db_path) = matches.get_one::<String>("read") {
-        print_info(&format!("正在读取数据库: {}", db_path));
-        
-        let db_server = match sled::open(db_path) {
-            Ok(db) => {
-                print_success("服务器数据库打开成功");
-                db
-            },
-            Err(e) => {
-                print_error(&format!("打开服务器数据库失败: {}", e));
-                return Err(Box::new(e));
-            }
-        };
+    #[cfg(feature = "db")]
+    {
+        app = app
+            .arg(Arg::new("read")
+                .short('r')
+                .long("read")
+                .value_name("DATABASE")
+                .help("读取并格式化显示钓鱼记录"))
+            .arg(Arg::new("input")
+                .short('i')
+                .long("input")
+                .value_name("EMAIL_LIST")
+                .help("从文件导入目标邮箱列表"))
+            .arg(Arg::new("show")
+                .long("show")
+                .help("显示所有目标邮箱")
+                .num_args(0))
+            .arg(Arg::new("delete")
+                .short('d')
+                .long("delete")
+                .value_name("ID")
+                .help("删除指定ID的邮箱记录"));
+    }
 
-        let action_tree = match db_server.open_tree("actions") {
-            Ok(tree) => {
-                tree
-            },
-            Err(e) => {
-                print_error(&format!("打开actions表失败: {}", e));
-                return Err(Box::new(e));
-            }
-        };
+    #[cfg(feature = "mail")]
+    {
+        app = app
+            .arg(Arg::new("generate")
+                .short('g')
+                .long("generate")
+                .value_name("TEMPLATE")
+                .help("根据模板生成钓鱼邮件"))
+            .arg(Arg::new("send-all")
+                .long("send-all")
+                .help("向所有目标发送钓鱼邮件")
+                .num_args(0))
+            .arg(Arg::new("send")
+                .long("send")
+                .value_name("ID")
+                .help("向指定ID的目标发送钓鱼邮件"));
+    }
 
-        let data_tree = match db_server.open_tree("data") {
-            Ok(tree) => {
-                tree
-            },
-            Err(e) => {
-                print_error(&format!("打开data表失败: {}", e));
-                return Err(Box::new(e));
-            }
-        };
+    let matches = app.clone().get_matches();
 
-        let db_client = match sled::open(DB_PATH) {
-            Ok(db) => {
-                db
-            },
-            Err(e) => {
-                print_error(&format!("打开客户端数据库失败: {}", e));
-                return Err(Box::new(e));
-            }
-        };
+    // 数据库相关功能
+    #[cfg(feature = "db")]
+    {
+        if let Some(db_path) = matches.get_one::<String>("read") {
+            print_info(&format!("正在读取数据库: {}", db_path));
+            
+            let db_server = match sled::open(db_path) {
+                Ok(db) => {
+                    print_success("服务器数据库打开成功");
+                    db
+                },
+                Err(e) => {
+                    print_error(&format!("打开服务器数据库失败: {}", e));
+                    return Err(Box::new(e));
+                }
+            };
 
-        let email_tree = match db_client.open_tree(EMAIL_TREE) {
-            Ok(tree) => {
-                tree
-            },
-            Err(e) => {
-                print_error(&format!("打开email表失败: {}", e));
-                return Err(Box::new(e));
+            let action_tree = match db_server.open_tree("actions") {
+                Ok(tree) => {
+                    tree
+                },
+                Err(e) => {
+                    print_error(&format!("打开actions表失败: {}", e));
+                    return Err(Box::new(e));
+                }
+            };
+
+            let data_tree = match db_server.open_tree("data") {
+                Ok(tree) => {
+                    tree
+                },
+                Err(e) => {
+                    print_error(&format!("打开data表失败: {}", e));
+                    return Err(Box::new(e));
+                }
+            };
+
+            let db_client = match sled::open(DB_PATH) {
+                Ok(db) => {
+                    db
+                },
+                Err(e) => {
+                    print_error(&format!("打开客户端数据库失败: {}", e));
+                    return Err(Box::new(e));
+                }
+            };
+
+            let email_tree = match db_client.open_tree(EMAIL_TREE) {
+                Ok(tree) => {
+                    tree
+                },
+                Err(e) => {
+                    print_error(&format!("打开email表失败: {}", e));
+                    return Err(Box::new(e));
+                }
+            };
+            
+            match db::traverse_actions(&action_tree, &data_tree, &email_tree) {
+                Ok(_) => (),
+                Err(e) => {
+                    print_error(&format!("遍历钓鱼记录失败: {}", e));
+                    return Err(e);
+                }
             }
-        };
-        
-        match db::traverse_actions(&action_tree, &data_tree, &email_tree) {
-            Ok(_) => (),
-            Err(e) => {
-                print_error(&format!("遍历钓鱼记录失败: {}", e));
-                return Err(e);
+        } else if let Some(input_path) = matches.get_one::<String>("input") {
+            print_info(&format!("正在导入邮箱列表: {}", input_path));
+            
+            let db = sled::open(DB_PATH)?;
+            let email_tree = db.open_tree(EMAIL_TREE)?;
+            
+            match db::load_emails_to_db(&email_tree, input_path) {
+                Ok(_) => print_success("邮箱列表导入成功"),
+                Err(e) => print_error(&format!("导入失败: {}", e)),
+            }
+        } else if matches.get_flag("show") {
+            let db = sled::open(DB_PATH)?;
+            let email_tree = db.open_tree(EMAIL_TREE)?;
+            
+            show_all_emails(&email_tree)?;
+        } else if let Some(id) = matches.get_one::<String>("delete") {
+            let db = sled::open(DB_PATH)?;
+            let email_tree = db.open_tree(EMAIL_TREE)?;
+            
+            if let Err(e) = db::delete_email_by_id(&email_tree, id) {
+                print_error(&format!("删除失败: {}", e));
             }
         }
     }
-    else if let Some(input_path) = matches.get_one::<String>("input") {
-        print_info(&format!("正在导入邮箱列表: {}", input_path));
-        
-        let db = sled::open(DB_PATH)?;
-        let email_tree = db.open_tree(EMAIL_TREE)?;
-        
-        match db::load_emails_to_db(&email_tree, input_path) {
-            Ok(_) => print_success("邮箱列表导入成功"),
-            Err(e) => print_error(&format!("导入失败: {}", e)),
+
+    // 邮件相关功能
+    #[cfg(feature = "mail")]
+    {
+        if let Some(template_path) = matches.get_one::<String>("generate") {
+            print_info(&format!("正在生成钓鱼邮件: {}", template_path));
+            let db = sled::open(DB_PATH)?;
+            let email_tree = db.open_tree(EMAIL_TREE)?;
+            
+            match generate_phishing_emails(&email_tree, template_path) {
+                Ok(_) => print_success("所有钓鱼邮件生成完成"),
+                Err(e) => print_error(&format!("生成失败: {}", e)),
+            }
+        } else if matches.get_flag("send-all") {
+            // 检查配置文件
+            let config_path = "config.toml";
+            if !Path::new(config_path).exists() {
+                print_error("找不到配置文件 config.toml");
+                return Ok(());
+            }
+
+            let config: Config = toml::from_str(&fs::read_to_string(config_path)?)?;
+
+            if !Path::new(&config.email.template).exists() {
+                print_error(&format!("找不到邮件模板文件 {}", config.email.template));
+                return Ok(());
+            }
+
+            let db = sled::open(DB_PATH)?;
+            let email_tree = db.open_tree(EMAIL_TREE)?;
+
+            print_info("请输入SMTP密码：");
+            let password = read_password()?;
+
+            print_info("开始批量发送邮件");
+            let rt = tokio::runtime::Runtime::new()?;
+            rt.block_on(async {
+                send_phishing_emails(&email_tree, config, password).await?;
+                Ok::<(), Box<dyn Error>>(())
+            })?;
+            print_success("所有邮件发送完成");
+        } else if let Some(target_id) = matches.get_one::<String>("send") {
+            // 检查配置文件
+            let config_path = "config.toml";
+            if !Path::new(config_path).exists() {
+                print_error("找不到配置文件 config.toml");
+                return Ok(());
+            }
+
+            let config: Config = toml::from_str(&fs::read_to_string(config_path)?)?;
+
+            if !Path::new(&config.email.template).exists() {
+                print_error(&format!("找不到邮件模板文件 {}", config.email.template));
+                return Ok(());
+            }
+
+            let db = sled::open(DB_PATH)?;
+            let email_tree = db.open_tree(EMAIL_TREE)?;
+
+            print_info("请输入SMTP密码：");
+            let password = read_password()?;
+
+            let rt = tokio::runtime::Runtime::new()?;
+            rt.block_on(async {
+                send_single_email(&email_tree, &config, target_id, &password).await?;
+                Ok::<(), Box<dyn Error>>(())
+            })?;
         }
-    } else if let Some(template_path) = matches.get_one::<String>("generate") {
-        print_info(&format!("正在生成钓鱼邮件: {}", template_path));
-        let db = sled::open(DB_PATH)?;
-        let email_tree = db.open_tree(EMAIL_TREE)?;
-        
-        match generate_phishing_emails(&email_tree, template_path) {
-            Ok(_) => print_success("所有钓鱼邮件生成完成"),
-            Err(e) => print_error(&format!("生成失败: {}", e)),
-        }
-    } else if matches.get_flag("send-all") {
-        // 检查配置文件
-        let config_path = "config.toml";
-        if !Path::new(config_path).exists() {
-            print_error("找不到配置文件 config.toml");
-            return Ok(());
-        }
+    }
 
-        let config: Config = toml::from_str(&fs::read_to_string(config_path)?)?;
-
-        if !Path::new(&config.email.template).exists() {
-            print_error(&format!("找不到邮件模板文件 {}", config.email.template));
-            return Ok(());
-        }
-
-        let db = sled::open(DB_PATH)?;
-        let email_tree = db.open_tree(EMAIL_TREE)?;
-
-        print_info("请输入SMTP密码：");
-        let password = read_password()?;
-
-        print_info("开始批量发送邮件");
-        let rt = tokio::runtime::Runtime::new()?;
-        rt.block_on(async {
-            send_phishing_emails(&email_tree, config, password).await?;
-            Ok::<(), Box<dyn Error>>(())
-        })?;
-        print_success("所有邮件发送完成");
-    } else if let Some(target_id) = matches.get_one::<String>("send") {
-        // 检查配置文件
-        let config_path = "config.toml";
-        if !Path::new(config_path).exists() {
-            print_error("找不到配置文件 config.toml");
-            return Ok(());
-        }
-
-        let config: Config = toml::from_str(&fs::read_to_string(config_path)?)?;
-
-        if !Path::new(&config.email.template).exists() {
-            print_error(&format!("找不到邮件模板文件 {}", config.email.template));
-            return Ok(());
-        }
-
-        let db = sled::open(DB_PATH)?;
-        let email_tree = db.open_tree(EMAIL_TREE)?;
-
-        print_info("请输入SMTP密码：");
-        let password = read_password()?;
-
-        let rt = tokio::runtime::Runtime::new()?;
-        rt.block_on(async {
-            send_single_email(&email_tree, &config, target_id, &password).await?;
-            Ok::<(), Box<dyn Error>>(())
-        })?;
-    } else if matches.get_flag("show") {
-        let db = sled::open(DB_PATH)?;
-        let email_tree = db.open_tree(EMAIL_TREE)?;
-        
-        show_all_emails(&email_tree)?;
-    } else if let Some(id) = matches.get_one::<String>("delete") {
-        let db = sled::open(DB_PATH)?;
-        let email_tree = db.open_tree(EMAIL_TREE)?;
-        
-        if let Err(e) = db::delete_email_by_id(&email_tree, id) {
-            print_error(&format!("删除失败: {}", e));
-        }
-    } else {
-        Command::new("Rustphish Client").print_help()?;
+    // 如果没有匹配任何命令
+    if !matches.args_present() {
+        app.print_help()?;
         println!();
     }
 

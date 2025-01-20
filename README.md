@@ -26,18 +26,25 @@
 ![](img/4.png)
 
 # 使用方法
+## 下载
+根据操作系统环境，在Github右侧的`Releases`中下载`client`和`server`
+> `client_read` 是条件编译的最小客户端，只用于读取数据库，不支持发送邮件。该程序的设计用于面向内网数据库文件不便于传出的场景，可以将该文件传入内网服务器中，直接用于解密数据库记录
+> `client_all` 是完整客户端，支持发送邮件
 ## 搭建服务器
 1. 修改`config.toml`，配置服务端监听端口、数据库路径、smtp服务器信息等，详情见[配置文件](#配置文件)
 2. 修改`frontend/index.html`，配置仿冒页面，详情见[仿冒页面](#仿冒页面)
 3. 运行`./server`，启动服务端
 4. 所有信息自动记录进`./database`数据库，该数据库只能使用客户端软件读取：`./client.exe --read ./database`
 
-## 使用客户端
+## 使用客户端发送钓鱼邮件
 1. `./client.exe --input xxx.txt`: 导入邮箱
 2. `./client.exe --show`: 确认邮箱成功导入
 3. 修改配置文件`config.toml`，配置每封邮件的间隔时间、发信人、主题等信息，详情见[配置文件](#配置文件)
 4. 修改邮件模板文件`template.html`，配置邮件内容，详情见[邮件模板](#邮件模板)
 5. `./client.exe --send-all`: 发送所有钓鱼邮件
+
+## 使用客户端读取数据库记录
+1. `./client.exe --read ./database`: 读取数据库记录（或使用`client_read`）
 
 ## 注意事项
 ### 仿冒页面
@@ -95,7 +102,8 @@ template = "template.html" #邮件模板路径
 
 # 编译
 ```bash
-cargo build --release -p client
+cargo build --release -p client --features db
+cargo build --release -p client --all-features
 cargo build --release -p server
 ```
 
