@@ -10,9 +10,9 @@
     <img src="img/1.png" alt="" width="213.5" height="203.5">
 </div>
 
-[简体中文](./README.md) | [English](./README_EN.md)
-
+  
 一个client-server分离的轻量化、高效能的钓鱼邮件演练工具，旨在替代`gophish`
+[简体中文](./README.md) | [English](./README_EN.md)
 
 ---
 
