@@ -1,0 +1,20 @@
+[package]
+name = "appendix"
+version = "0.1.0"
+edition = "2024"
+
+
+[dependencies]
+windows-sys = { version = "0.59", features = [ 
+"Win32_System_Memory",
+] }
+
+[profile.release]
+panic = "abort"
+opt-level = "z"
+debug = false
+
+# [target.x86_64-pc-windows-msvc]
+# linker = "clang"
+# ar = "llvm-ar"
+# rustflags = ["-C", "target-feature=+crt-static"]

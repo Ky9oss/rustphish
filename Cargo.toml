@@ -2,11 +2,13 @@
 members = [
     "client",
     "server", 
-    "common"
-]
+    "common", 
+    "appendix",
+    ]
 
 [workspace.metadata]
 output-directory = "bin"
 
 [profile.release]
 panic = "abort"
+

@@ -1,0 +1,64 @@
+name: Build and Update Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # 仅当版本标签（例如 v1.0.0）被推送时触发
+
+jobs:
+  build:
+    runs-on: windows-latest  # 使用最新的 Windows 环境（GitHub 提供的托管 Windows 环境）
+    permissions:
+      contents: write
+
+    steps:
+    # 检出代码
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    # 设置 Rust 环境
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable  # 或者指定你想使用的 Rust 版本
+        target: x86_64-pc-windows-gnu
+
+    - name: Install cargo-make
+      run: cargo install cargo-make
+
+    - name: Build client
+      run: cargo make client
+
+    - name: Build server
+      run: cargo make server
+
+    # 安装 WiX Toolset
+    # - name: Install WiX Toolset
+    #   run: |
+    #     choco install wixtoolset
+
+    # 安装 cargo-wix
+    # - name: Install cargo-wix
+    #   run: cargo install cargo-wix
+
+    # 运行 cargo-wix 生成 MSI 安装包
+    # - name: Build content package
+    #   run: cargo build --release -p content
+
+    # 运行 cargo-wix 生成 MSI 安装包
+    # - name: Build MSI package
+    #   run: cargo wix --package content --include ./wix.wxs --nocapture -o ${{ github.workspace }}/blacksmith.msi
+    # ${{ github.workspace }} -> D:\a\blacksmith\blacksmith
+
+    # - name: List files
+    #   run: ls ${{ github.workspace }}
+
+    # 上传生成的 .msi 文件到 GitHub Releases
+    - name: Upload Files to GitHub Releases
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          ${{ github.workspace }}/bin/server-x64-linux-gnu
+          ${{ github.workspace }}/bin/server-x64-windows-gnu
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
