@@ -152,6 +152,8 @@ cargo build --release -p server
 - [x] 外部config
 - [x] 替换unwrap，确保稳定性
 - [ ] https
+- [ ] 二维码钓鱼功能
+- [ ] 附件钓鱼功能
 - [ ] 挂载木马
 
 ## 客户端

@@ -17,6 +17,10 @@ pub fn verify_smtp_credentials(
         .credentials(creds.clone())
         .build();
 
+    // let mailer = SmtpTransport::builder_dangerous(smtp_server)
+    //     .credentials(creds.clone())
+    //     .build();
+
     // 尝试连接以验证凭证
     mailer.test_connection()?;
 

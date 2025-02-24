@@ -86,6 +86,67 @@ fn generate_phishing_emails(email_tree: &sled::Tree, template_path: &str) -> Res
 }
 
 #[cfg(feature = "mail")]
+async fn send_multi_emails(email_tree: &sled::Tree, config: Config, password: String, from: u16, to: u16) -> Result<(), Box<dyn Error>> {
+    let emails = db::get_all_emails(&email_tree)?;
+    let end = std::cmp::min(to, emails.len().try_into().unwrap());
+    let new_emails = &emails[from as usize..end as usize];
+
+    print_info(&format!("找到 {} 个目标邮箱", new_emails.len()));
+
+    // 读取邮件模板
+    let template = fs::read_to_string(&config.email.template)?;
+
+    // 验证SMTP凭证
+    print_info("验证SMTP凭证...");
+    smtp::verify_smtp_credentials(
+        &config.smtp.server,
+        &config.smtp.username,
+        &password,
+    )?;
+    print_success("SMTP凭证验证成功");
+
+    // 发送邮件
+    for entry in new_emails {
+        let content = template.replace("{{id}}", &entry.id);
+        
+        // 创建临时文件存储当前邮件内容
+        let temp_dir = Path::new("./temp");
+        create_dir_all(temp_dir)?;
+        let temp_file = format!("temp/{}.html", entry.id);
+        fs::write(&temp_file, &content)?;
+
+        print_info(&format!("正在发送邮件到 {}", entry.email));
+        
+        match smtp::send_html_email(
+            &config.smtp.server,
+            &temp_file,
+            &entry.email,
+            &config.smtp.subject,
+            &config.smtp.from_email,
+            &config.smtp.username,
+            &password,
+        ) {
+            Ok(result) => {
+                print_success(&format!("发送成功: {}", entry.email))
+            },
+            Err(e) => print_error(&format!("发送失败 {}: {}", entry.email, e)),
+        }
+
+        // 删除临时文件
+        fs::remove_file(&temp_file)?;
+
+        // 等待指定时间间隔
+        thread::sleep(Duration::from_secs(config.smtp.interval));
+    }
+
+    // 清理临时目录
+    fs::remove_dir("./temp")?;
+    
+    Ok(())
+}
+
+
+#[cfg(feature = "mail")]
 async fn send_phishing_emails(email_tree: &sled::Tree, config: Config, password: String) -> Result<(), Box<dyn Error>> {
     let emails = db::get_all_emails(&email_tree)?;
 
@@ -266,7 +327,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             .arg(Arg::new("send")
                 .long("send")
                 .value_name("ID")
-                .help("向指定ID的目标发送钓鱼邮件"));
+                .help("向指定ID的目标发送钓鱼邮件"))
+            .arg(Arg::new("send-from-to")
+                .long("send-from-to")
+                .value_name("ft")
+                .help("发送邮件区间"))
     }
 
     let matches = app.clone().get_matches();
@@ -424,6 +489,36 @@ fn main() -> Result<(), Box<dyn Error>> {
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(async {
                 send_single_email(&email_tree, &config, target_id, &password).await?;
+                Ok::<(), Box<dyn Error>>(())
+            })?;
+        } else if let Some(ft) = matches.get_one::<String>("send-from-to") {
+            // 检查配置文件
+            let config_path = "config.toml";
+            if !Path::new(config_path).exists() {
+                print_error("找不到配置文件 config.toml");
+                return Ok(());
+            }
+
+            let config: Config = toml::from_str(&fs::read_to_string(config_path)?)?;
+
+            if !Path::new(&config.email.template).exists() {
+                print_error(&format!("找不到邮件模板文件 {}", config.email.template));
+                return Ok(());
+            }
+
+            let db = sled::open(DB_PATH)?;
+            let email_tree = db.open_tree(EMAIL_TREE)?;
+
+            print_info("请输入SMTP密码：");
+            let password = read_password()?;
+
+            let from_to: Vec<u16> = ft.split('-').map(|x| x.parse().unwrap()).collect();
+            let from = from_to[0];
+            let to = from_to[1];
+
+            let rt = tokio::runtime::Runtime::new()?;
+            rt.block_on(async {
+                send_multi_emails(&email_tree, config, password, from, to).await?;
                 Ok::<(), Box<dyn Error>>(())
             })?;
         }
