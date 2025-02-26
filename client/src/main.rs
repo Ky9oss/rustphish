@@ -6,13 +6,15 @@ use std::path::Path;
 use std::thread;
 use std::time::Duration;
 use serde::Deserialize;
+
 #[cfg(feature = "mail")]
-use {
-    rpassword::read_password,
-};
+use rpassword::read_password;
 
 #[cfg(feature = "mail")]
 mod smtp;
+
+#[cfg(feature = "mail")]
+mod patch_tool;
 
 #[cfg(feature = "db")]
 mod db;
