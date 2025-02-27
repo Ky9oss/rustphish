@@ -32,7 +32,10 @@ struct AppState {
 #[actix_web::main]
 async fn main() -> io::Result<()> {
     // 1. 环境变量和日志初始化
-    env::set_var("RUST_LOG", "info");
+    unsafe {
+        env::set_var("RUST_LOG", "info");
+    }
+
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
     
     // 2. 数据库初始化

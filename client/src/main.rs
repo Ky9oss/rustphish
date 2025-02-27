@@ -147,7 +147,6 @@ async fn send_multi_emails(email_tree: &sled::Tree, config: Config, password: St
     Ok(())
 }
 
-
 #[cfg(feature = "mail")]
 async fn send_phishing_emails(email_tree: &sled::Tree, config: Config, password: String) -> Result<(), Box<dyn Error>> {
     let emails = db::get_all_emails(&email_tree)?;

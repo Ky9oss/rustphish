@@ -8,7 +8,7 @@ use colored::*;
 use common::structs::{Action, Data};
 use zerocopy::LayoutVerified;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct EmailEntry {
     pub id: String,
     pub email: String,

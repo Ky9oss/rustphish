@@ -1,12 +1,9 @@
 use sled;
 use {
-    byteorder::BigEndian,
     zerocopy::{
-        AsBytes, LayoutVerified, U16, U32, FromBytes, Unaligned
+        AsBytes, LayoutVerified
     },
 };
-use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
 use common::structs::{Action, Data};
 
 
