@@ -14,7 +14,7 @@ use rpassword::read_password;
 mod smtp;
 
 #[cfg(feature = "mail")]
-mod patch_tool;
+mod malware;
 
 #[cfg(feature = "db")]
 mod db;
@@ -229,6 +229,55 @@ fn show_all_emails(email_tree: &sled::Tree) -> Result<(), Box<dyn Error>> {
 
 #[cfg(feature = "mail")]
 async fn send_single_email(
+    email_tree: &sled::Tree,
+    config: &Config,
+    target_id: &str,
+    password: &str
+) -> Result<(), Box<dyn Error>> {
+    // 查找目标邮箱
+    match email_tree.get(target_id.as_bytes())? {
+        Some(value) => {
+            let entry: db::EmailEntry = bincode::deserialize(&value)?;
+            let template = fs::read_to_string(&config.email.template)?;
+            let content = template.replace("{{id}}", &entry.id);
+            
+            // 创建临时文件
+            let temp_dir = Path::new("./temp");
+            create_dir_all(temp_dir)?;
+            let temp_file = format!("temp/{}.html", entry.id);
+            fs::write(&temp_file, &content)?;
+
+            print_info(&format!("正在发送邮件到 {}", entry.email));
+            
+            match smtp::send_html_email(
+                &config.smtp.server,
+                &temp_file,
+                &entry.email,
+                &config.smtp.subject,
+                &config.smtp.from_email,
+                &config.smtp.username,
+                password,
+            ) {
+                Ok(_) => print_success(&format!("发送成功: {}", entry.email)),
+                Err(e) => print_error(&format!("发送失败 {}: {}", entry.email, e)),
+            }
+
+            // 清理临时文件
+            fs::remove_file(&temp_file)?;
+            Ok(())
+        },
+        None => {
+            print_error(&format!("未找到ID为 {} 的邮箱", target_id));
+            Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "Email ID not found"
+            )))
+        }
+    }
+}
+
+#[cfg(feature = "mail")]
+async fn send_single_email_with_appendix(
     email_tree: &sled::Tree,
     config: &Config,
     target_id: &str,

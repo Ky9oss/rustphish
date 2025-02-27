@@ -1,3 +1,4 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 #![no_std]
 #![no_main]
 // #![feature(lang_items)]
