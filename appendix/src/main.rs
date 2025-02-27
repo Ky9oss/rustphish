@@ -1,9 +1,11 @@
-// #![no_std]
+#![no_std]
 #![no_main]
-#![feature(lang_items)]
-use core::arch::asm;
+// #![feature(lang_items)]
 use core::ptr::null;
 use core::ptr::null_mut;
+
+extern crate alloc;
+use alloc::vec::Vec;
 
 // 使用 MaybeUninit 避免默认初始化破坏二进制特征
 use core::mem::MaybeUninit;
@@ -88,6 +90,15 @@ pub fn init_config() {
     }
 }
 
+// memory allocator
+#[global_allocator]
+static ALLOCATOR: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}
+
 // 获取 URL 的 &str 引用
 pub fn get_url() -> &'static str {
     unsafe {
@@ -95,7 +106,7 @@ pub fn get_url() -> &'static str {
         let bytes = &(*config).url;
         // 查找第一个 null 字节作为终止符
         let len = bytes.iter().position(|&b| b == 0).unwrap_or(256);
-        std::str::from_utf8_unchecked(&bytes[..len])
+        core::str::from_utf8_unchecked(&bytes[..len])
     }
 }
 
