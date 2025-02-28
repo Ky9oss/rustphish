@@ -111,8 +111,8 @@
 ```html
 <html><head>
 ......
-点击下方链接，完成测试： <a href="http://ip:port/index/{{id}}">http://ip:port/index/{{id}}</a>
-<img src="http://ip:port/image/{{id}}" alt=""> <!-- 用于记录受害者是否打开邮件 -->
+点击下方链接，完成测试： <a href="{{index}}">{{index}}</a>
+<img src="{{image}}" alt=""> <!-- 用于记录受害者是否打开邮件 -->
 </body></html>
 ```
 
@@ -152,10 +152,11 @@ cargo build --release -p server
 - [x] 图片识别接口
 - [x] 外部config
 - [x] 替换unwrap，确保稳定性
+- [x] 附件钓鱼功能(exe)
+- [ ] 附件钓鱼功能(lnk)
+- [ ] 附件钓鱼功能(macro)
 - [ ] https
 - [ ] 二维码钓鱼功能
-- [ ] 附件钓鱼功能
-- [ ] 挂载木马
 
 ## 客户端
 - [x] 导入受害人列表，存储受害人信息及对应ID

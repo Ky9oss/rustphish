@@ -4,7 +4,7 @@ use {
         AsBytes, LayoutVerified
     },
 };
-use common::structs::{Action, Data};
+use shared::structs::{Action, Data};
 
 
 

@@ -1,0 +1,11 @@
+[env]
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+
+[tasks.appendix]
+script_runner = "powershell"
+script_extension = "ps1"
+    # $WINDOWS_SYS = Get-ChildItem -Path target\x86_64-pc-windows-msvc\release\deps -Filter windows_sys-*.rlib | Select-Object -First 1 -ExpandProperty FullName
+    # rustc
+    #   --extern "windows_sys=$WINDOWS_SYS" `
+script = ['''
+''']

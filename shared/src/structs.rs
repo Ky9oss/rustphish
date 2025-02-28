@@ -69,30 +69,3 @@ impl EmailTree {
         &self.0
     }
 }
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct Config {
-    pub server: Server,
-    // pub routes: Routes,
-    pub paths: Paths,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct Server {
-    pub ip: String,
-    pub port: u16,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct Paths {
-    pub phish_page: String,
-    pub redirect_url: String,
-    pub success_page: String,
-}
-
-impl Config {
-    pub fn load() -> Result<Self, Box<dyn std::error::Error>> {
-        let content = fs::read_to_string("config.toml")?;
-        Ok(toml::from_str(&content)?)
-    }
-} 

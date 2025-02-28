@@ -1,0 +1,14 @@
+[server]
+ip_or_domain = "teamserver.com"
+port = 80
+
+[smtp]
+server = "smtp.126.com"
+username = "xxx@126.com"
+from_email = "Test <xxx@126.com>"
+subject = "Test Subject"
+interval = 5
+
+[email]
+template = "template.html"
+appendix_name = "xxx"
