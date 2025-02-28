@@ -14,6 +14,7 @@ atype
 0 -- 点击邮件
 1 -- 打开链接
 2 -- 提交数据
+3 -- 点击木马
 */
 #[derive(Debug, Clone, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]

@@ -130,7 +130,7 @@ fn add_attachment(
                 .first_or_octet_stream()
                 .essence_str().to_string(); 
 
-            crate::print_info(&format!("成功创建木马文件 {}", entry_id));
+            crate::print_success(&format!("成功创建木马文件 {}", entry_id));
             let body = fs::read(&temp_file)?;
 
             // let encoded_filename = percent_encoding::percent_encode(appendix_name.as_bytes(), percent_encoding::NON_ALPHANUMERIC);
