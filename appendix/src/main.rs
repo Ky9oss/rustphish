@@ -157,7 +157,7 @@ pub extern "system" fn mainCRTStartup() -> i32 {
         let h_connect = WinHttpConnect(
             h_session,
             ip_or_domain.as_ptr(), //ip or domain
-            8080 as u16, // port 80
+            8080 as u16, // port
             0
         );
         

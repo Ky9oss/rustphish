@@ -1,11 +1,48 @@
 [env]
 CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
 
-[tasks.appendix]
+[tasks.clean]
 script_runner = "powershell"
 script_extension = "ps1"
-    # $WINDOWS_SYS = Get-ChildItem -Path target\x86_64-pc-windows-msvc\release\deps -Filter windows_sys-*.rlib | Select-Object -First 1 -ExpandProperty FullName
-    # rustc
-    #   --extern "windows_sys=$WINDOWS_SYS" `
 script = ['''
+cargo clean
+rm ../../bin/ -Recurse -Force
 ''']
+
+[tasks.move]
+script_runner = "powershell"
+script_extension = "ps1"
+script = ['''
+mkdir ../../bin
+mkdir ../../bin/client
+mkdir ../../bin/client/libs
+mkdir ../../bin/server
+mv ../../target/x86_64-windows-pc-msvc/release/appendix.exe ../../bin/client/libs/
+mv ../../target/x86_64-windows-pc-gnu/release/client.exe ../../bin/client/client-x86_64-windows-pc-gnu.exe
+mv ../../target/x86_64-unknown-linux-gnu/release/server ../../bin/server/server-x86_64-unknown-linux-gnu
+cp ../../client_config.toml ../../bin/client/
+cp ../../server_config.toml ../../bin/server/
+cp ../../frontend ../../bin/server/ -r
+cp ../../template.html ../../bin/client/
+''']
+
+[tasks.bin]
+dependencies = [
+"clean", 
+"appendix", 
+"server",
+"client",
+"move",
+]
+
+[tasks.appendix]
+command = "cargo"
+args = ["build", "--release", "--target", "x86_64-windows-pc-msvc", "-p", "appendix"]
+
+[tasks.server]
+command = "cargo"
+args = ["build", "--release", "--target", "x86_64-unknown-linux-gnu", "-p", "server"]
+
+[tasks.client]
+command = "cargo"
+args = ["build", "--release", "--target", "x86_64-windows-pc-gnu", "-p", "client", "--all-features"]

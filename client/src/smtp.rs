@@ -108,7 +108,7 @@ fn add_attachment(
     server_url: &str,
     entry_id: &str,
 ) -> Result<MultiPart, Box<dyn Error>> {
-    let template_exe_path: &str = "./appendix.exe";
+    let template_exe_path: &str = "./libs/appendix.exe";
     let appendix_name = ensure_exe_suffix(appendix_name);
 
     let content = fs::read(template_exe_path)?;

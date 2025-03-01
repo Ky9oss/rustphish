@@ -1,64 +1,108 @@
-name: Build and Update Release
+name: Cross-Platform Release
 
 on:
   push:
     tags:
-      - 'v*'  # 仅当版本标签（例如 v1.0.0）被推送时触发
+      - "v*"
+
+env:
+  RUST_TOOLCHAIN: nightly
+  CARGO_MAKE_VERSION: 0.36.5
 
 jobs:
   build:
-    runs-on: windows-latest  # 使用最新的 Windows 环境（GitHub 提供的托管 Windows 环境）
+    name: Build and Package
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust@v1
+        with:
+          targets: |
+            x86_64-pc-windows-msvc
+            x86_64-pc-windows-gnu
+            x86_64-unknown-linux-gnu
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          profile: minimal
+
+      - name: Install Linux Cross-Compiler
+        run: |
+          choco install -y mingw --params "/InstallDir:C:/msys64"
+          refreshenv
+          C:/msys64/msys2_shell.cmd -c "pacman -Syu --noconfirm --needed mingw-w64-x86_64-gcc"
+
+      - name: Install Visual Studio Build Tools
+        run: |
+          choco install -y visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK.19041"
+
+      - name: Install cargo-make
+        run: cargo install cargo-make --version ${{ env.CARGO_MAKE_VERSION }}
+
+      - name: Run Full Build
+        run: cargo make bin
+
+      - name: Verify Build Output
+        run: |
+          ls ../../bin -Recurse
+          Test-Path -Path ../../bin/client/client-x86_64-windows-pc-gnu.exe
+          Test-Path -Path ../../bin/server/server-x86_64-unknown-linux-gnu
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: binaries
+          path: ../../bin
+          retention-days: 1
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: windows-latest
     permissions:
       contents: write
-
     steps:
-    # 检出代码
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+        with:
+          name: binaries
+          path: bin
 
-    # 设置 Rust 环境
-    - name: Set up Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable  # 或者指定你想使用的 Rust 版本
-        target: x86_64-pc-windows-gnu
+      - name: Package Client
+        run: |
+          Compress-Archive -Path bin/client/* -DestinationPath client.zip
+          Get-Item client.zip
 
-    - name: Install cargo-make
-      run: cargo install cargo-make
+      - name: Package Server
+        run: |
+          Compress-Archive -Path bin/server/* -DestinationPath server.zip
+          Get-Item server.zip
 
-    - name: Build client
-      run: cargo make client
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
 
-    - name: Build server
-      run: cargo make server
+      - name: Upload Client Package
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: client.zip
+          asset_name: client.zip
+          asset_content_type: application/zip
 
-    # 安装 WiX Toolset
-    # - name: Install WiX Toolset
-    #   run: |
-    #     choco install wixtoolset
-
-    # 安装 cargo-wix
-    # - name: Install cargo-wix
-    #   run: cargo install cargo-wix
-
-    # 运行 cargo-wix 生成 MSI 安装包
-    # - name: Build content package
-    #   run: cargo build --release -p content
-
-    # 运行 cargo-wix 生成 MSI 安装包
-    # - name: Build MSI package
-    #   run: cargo wix --package content --include ./wix.wxs --nocapture -o ${{ github.workspace }}/blacksmith.msi
-    # ${{ github.workspace }} -> D:\a\blacksmith\blacksmith
-
-    # - name: List files
-    #   run: ls ${{ github.workspace }}
-
-    # 上传生成的 .msi 文件到 GitHub Releases
-    - name: Upload Files to GitHub Releases
-      uses: softprops/action-gh-release@v2
-      with:
-        files: |
-          ${{ github.workspace }}/bin/server-x64-linux-gnu
-          ${{ github.workspace }}/bin/server-x64-windows-gnu
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Server Package
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: server.zip
+          asset_name: server.zip
+          asset_content_type: application/zip
