@@ -28,8 +28,8 @@ cp ../../template.html ../../bin/client/
 
 [tasks.bin]
 # "clean", 
+# "appendix", 
 dependencies = [
-"appendix", 
 "server",
 "client",
 "move",
