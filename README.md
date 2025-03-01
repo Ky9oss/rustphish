@@ -103,7 +103,7 @@
 ## 编译模板文件
 1. 仅可于`windows`中进行编译，确保自己有`rust`及`C++桌面开发`环境
 2. 修改`appendix\src\main.rs`文件中的IP和端口，指向钓鱼服务器
-3. 使用`cargo make appendix`编译
+3. 使用`cargo make appendix`编译，将编译好的文件移动到客户端的`./libs/appendix.exe`
 4. 后续步骤参考[基本使用方法](#基本使用方法链接钓鱼)
 
 # 注意事项
