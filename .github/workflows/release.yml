@@ -6,7 +6,7 @@ on:
       - "v*"
 
 env:
-  RUST_TOOLCHAIN: nightly
+  RUST_TOOLCHAIN: stable
   CARGO_MAKE_VERSION: 0.36.23
 
 jobs:
@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Rust
-        uses: actions-rs/toolchain@v1
+        uses: actions-rust-lang/setup-rust@v1
         with:
           targets: |
             x86_64-pc-windows-msvc
@@ -27,32 +27,40 @@ jobs:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           profile: minimal
 
-      - name: Install Linux Cross-Compiler
+      - name: Install Linux Toolchain
         run: |
           choco install -y mingw --params "/InstallDir:C:/msys64"
-          refreshenv
           C:/msys64/msys2_shell.cmd -c "pacman -Syu --noconfirm --needed mingw-w64-x86_64-gcc"
+          rustup target add x86_64-unknown-linux-gnu
+          echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=C:/msys64/mingw64/bin/x86_64-linux-gnu-gcc" >> $env:GITHUB_ENV
 
-      - name: Install Visual Studio Build Tools
+      - name: Install VS Build Tools
         run: |
-          choco install -y visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK.19041"
+          choco install -y visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64"
+
+      - name: Cache Dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~\.cargo\registry
+            ~\.cargo\git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install cargo-make
         run: cargo install cargo-make --version ${{ env.CARGO_MAKE_VERSION }}
 
-      - name: Run Full Build
+      - name: Run Build
         run: cargo make bin
 
-      - name: Verify Build Output
+      - name: Verify Outputs
         run: |
-          ls ../../bin -Recurse
-          Test-Path -Path ../../bin/client/client-x86_64-windows-pc-gnu.exe
-          Test-Path -Path ../../bin/server/server-x86_64-unknown-linux-gnu
+          Test-Path -Path bin/client/client-x86_64-windows-pc-gnu.exe
+          Test-Path -Path bin/server/server-x86_64-unknown-linux-gnu
 
       - uses: actions/upload-artifact@v3
         with:
           name: binaries
-          path: ../../bin
+          path: ${{ github.workspace }}/bin
           retention-days: 1
 
   release:
@@ -61,49 +69,37 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+
     steps:
       - uses: actions/download-artifact@v3
         with:
           name: binaries
           path: bin
 
-      - name: Package Client
+      - name: Package Binaries
         run: |
           Compress-Archive -Path bin/client/* -DestinationPath client.zip
-          Get-Item client.zip
-
-      - name: Package Server
-        run: |
           Compress-Archive -Path bin/server/* -DestinationPath server.zip
-          Get-Item server.zip
 
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+        uses: actions/create-release@v2
+        id: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref_name }}
-          draft: false
-          prerelease: false
+          generate_release_notes: true
 
-      - name: Upload Client Package
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Client
+        uses: actions/upload-release-asset@v2
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ steps.release.outputs.upload_url }}
           asset_path: client.zip
           asset_name: client.zip
-          asset_content_type: application/zip
 
-      - name: Upload Server Package
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Server
+        uses: actions/upload-release-asset@v2
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ steps.release.outputs.upload_url }}
           asset_path: server.zip
           asset_name: server.zip
-          asset_content_type: application/zip
