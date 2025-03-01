@@ -27,8 +27,8 @@ cp ../../template.html ../../bin/client/
 ''']
 
 [tasks.bin]
+# "clean", 
 dependencies = [
-"clean", 
 "appendix", 
 "server",
 "client",
@@ -37,7 +37,7 @@ dependencies = [
 
 [tasks.appendix]
 command = "cargo"
-args = ["build", "--release", "--target", "x86_64-windows-pc-msvc", "-p", "appendix"]
+args = ["build", "--release", "--target", "x86_64-pc-windows-msvc", "-p", "appendix"]
 
 [tasks.server]
 command = "cargo"
@@ -45,4 +45,4 @@ args = ["build", "--release", "--target", "x86_64-unknown-linux-gnu", "-p", "ser
 
 [tasks.client]
 command = "cargo"
-args = ["build", "--release", "--target", "x86_64-windows-pc-gnu", "-p", "client", "--all-features"]
+args = ["build", "--release", "--target", "x86_64-pc-windows-gnu", "-p", "client", "--all-features"]
