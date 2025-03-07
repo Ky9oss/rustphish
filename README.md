@@ -141,7 +141,7 @@
 </body></html>
 ```
 
-## 配置文件
+## server配置文件
 ```toml
 [server]
 ip = "0.0.0.0" #服务端监听ip
@@ -151,6 +151,13 @@ port = 8080 #服务端端口
 phish_page = "./frontend/test.html" #仿冒页面路径
 redirect_url = "http://localhost:8080/success" #提交成功后，重定向的url
 success_page = "./frontend/success.html" #路由`/success`下的成功页面路径，可以用于`paths.redirect_url`重定向
+```
+
+## client配置文件
+```toml
+[server]
+ip_or_domain = "teamserver.com"
+port = 80
 
 [smtp]
 server = "smtp.126.com" #smtp服务器地址
@@ -161,6 +168,11 @@ interval = 5 #每封邮件间隔时间
 
 [email]
 template = "template.html" #邮件模板路径
+original_appendix_path_exe = "./appendix.exe"
+appendix_name_for_sending_exe = "xxx"
+original_appendix_path_lnk = "./appendix.lnk"
+appendix_name_for_sending_lnk = "xxx"
+zip_name = "xxx"
 ```
 
 # 编译
