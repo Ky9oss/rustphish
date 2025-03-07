@@ -179,6 +179,7 @@ cargo build --release -p server
 - [x] 替换unwrap，确保稳定性
 - [x] 附件钓鱼功能(exe)
 - [ ] 附件钓鱼功能(lnk)
+- [ ] zip & random_password
 - [ ] 附件钓鱼功能(macro)
 - [ ] https
 - [ ] 二维码钓鱼功能

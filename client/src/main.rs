@@ -44,7 +44,10 @@ struct ServerConfig {
 #[derive(Deserialize)]
 struct EmailConfig {
     template: String, // 邮件模板路径
-    appendix_name: String, //附件木马的文件名
+    original_appendix_path_exe: String,
+    appendix_name_for_sending_exe: String, //附件木马的文件名
+    original_appendix_path_lnk: String,
+    appendix_name_for_sending_lnk: String, 
 }
 
 const BANNER: &str = r#"
@@ -110,9 +113,18 @@ async fn send_multi_emails(
     to: u16,
     is_appendix: bool
 ) -> Result<(), Box<dyn Error>> {
-    let appendix_name: &str = match is_appendix {
+    let appendix_name_for_sending_exe: &str = match is_appendix {
         true => {
-            &config.email.appendix_name
+            &config.email.appendix_name_for_sending_exe
+        }
+        false => {
+            ""
+        }
+    }; 
+
+    let template_exe_path: &str = match is_appendix {
+        true => {
+            &config.email.original_appendix_path_exe
         }
         false => {
             ""
@@ -158,11 +170,12 @@ async fn send_multi_emails(
             &config.smtp.from_email,
             &config.smtp.username,
             &password,
-            appendix_name,
+            appendix_name_for_sending_exe,
             &index_url,
             &entry.id,
+            template_exe_path,
         ) {
-            Ok(result) => print_success(&format!("发送成功: {}", entry.email)),
+            Ok(_) => print_success(&format!("发送成功: {}", entry.email)),
             Err(e) => print_error(&format!("发送失败 {}: {}", entry.email, e)),
         }
 
@@ -186,14 +199,24 @@ async fn send_phishing_emails(
     password: String,
     is_appendix: bool
 ) -> Result<(), Box<dyn Error>> {
-    let appendix_name: &str = match is_appendix {
+    let appendix_name_for_sending_exe: &str = match is_appendix {
         true => {
-            &config.email.appendix_name
+            &config.email.appendix_name_for_sending_exe
         }
         false => {
             ""
         }
     }; 
+
+    let template_exe_path: &str = match is_appendix {
+        true => {
+            &config.email.original_appendix_path_exe
+        }
+        false => {
+            ""
+        }
+    }; 
+
     let emails = db::get_all_emails(&email_tree)?;
 
     print_info(&format!("找到 {} 个目标邮箱", emails.len()));
@@ -231,11 +254,12 @@ async fn send_phishing_emails(
             &config.smtp.from_email,
             &config.smtp.username,
             &password,
-            appendix_name,
+            appendix_name_for_sending_exe,
             &index_url,
             &entry.id,
+            template_exe_path,
         ) {
-            Ok(result) => print_success(&format!("发送成功: {}", entry.email)),
+            Ok(_) => print_success(&format!("发送成功: {}", entry.email)),
             Err(e) => print_error(&format!("发送失败 {}: {}", entry.email, e)),
         }
 
@@ -282,9 +306,18 @@ async fn send_single_email(
     password: &str,
     is_appendix: bool,
 ) -> Result<(), Box<dyn Error>> {
-    let appendix_name: &str = match is_appendix {
+    let appendix_name_for_sending_exe: &str = match is_appendix {
         true => {
-            &config.email.appendix_name
+            &config.email.appendix_name_for_sending_exe
+        }
+        false => {
+            ""
+        }
+    }; 
+
+    let template_exe_path: &str = match is_appendix {
+        true => {
+            &config.email.original_appendix_path_exe
         }
         false => {
             ""
@@ -317,9 +350,10 @@ async fn send_single_email(
                 &config.smtp.from_email,
                 &config.smtp.username,
                 password,
-                appendix_name,
+                appendix_name_for_sending_exe,
                 &index_url,
                 &entry.id,
+                template_exe_path,
             ) {
                 Ok(_) => print_success(&format!("发送成功: {}", entry.email)),
                 Err(e) => print_error(&format!("发送失败 {}: {}", entry.email, e)),
@@ -414,9 +448,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                     .help("发送邮件区间"),
             )
             .arg(
-                Arg::new("appendix")
-                    .long("appendix")
-                    .help("使用附件钓鱼")
+                Arg::new("appendix-exe")
+                    .long("appendix-exe")
+                    .help("使用exe附件钓鱼")
                     .num_args(0),
             )
     }
@@ -553,7 +587,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             print_info("开始批量发送邮件");
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(async {
-                if matches.get_flag("appendix") {
+                if matches.get_flag("appendix-exe") {
                     send_phishing_emails(&email_tree, config, password, true).await?;
                 }else {
                     send_phishing_emails(&email_tree, config, password, false).await?;
@@ -584,7 +618,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(async {
-            if matches.get_flag("appendix") {
+            if matches.get_flag("appendix-exe") {
                     send_single_email(&email_tree, &config, target_id, &password, true).await?;
                 }else {
                     send_single_email(&email_tree, &config, target_id, &password, false).await?;
@@ -619,7 +653,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(async {
-                if matches.get_flag("appendix") {
+                if matches.get_flag("appendix-exe") {
                     send_multi_emails(&email_tree, config, password, from, to, true).await?;
                 }
                 else{
