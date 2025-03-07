@@ -10,6 +10,7 @@ colored = "1.9"
 clap = "4.5.26"
 shared = { path = "../shared" }
 object = { version = "0.36.7", features = ["read", "std"] }
+zip = { version = "2.2.3", features = ["aes-crypto"] }
 
 # 数据库功能所需依赖
 sled = { version = "0.34.7", optional = true }
