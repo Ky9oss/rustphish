@@ -104,7 +104,7 @@
 1. 仅可于`windows`中进行编译，确保自己有`rust`及`C++桌面开发`环境
 2. 修改`appendix\src\main.rs`文件中的IP和端口，指向钓鱼服务器
 3. 使用`cargo make appendix`编译
-4. 后续步骤参考[基本使用方法](#基本使用方法链接钓鱼)
+4. `./client.exe --send-all --appendix-exe`: 发送携带exe的钓鱼邮件
 
 # 注意事项
 ## 重要文件
@@ -178,6 +178,8 @@ cargo build --release -p server
 - [x] 外部config
 - [x] 替换unwrap，确保稳定性
 - [x] 附件钓鱼功能(exe)
+- [ ] exe添加图标功能
+- [ ] exe打包功能
 - [ ] 附件钓鱼功能(lnk)
 - [ ] 附件钓鱼功能(macro)
 - [ ] https
