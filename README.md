@@ -37,7 +37,8 @@
   - [重要文件](#重要文件)
   - [仿冒页面](#仿冒页面)
   - [邮件模板](#邮件模板)
-  - [配置文件](#配置文件)
+  - [server配置文件](#server配置文件)
+  - [client配置文件](#client配置文件)
 - [编译](#编译)
 - [功能实现](#功能实现)
   - [服务端](#服务端)
@@ -104,7 +105,7 @@
 1. 仅可于`windows`中进行编译，确保自己有`rust`及`C++桌面开发`环境
 2. 修改`appendix\src\main.rs`文件中的IP和端口，指向钓鱼服务器
 3. 使用`cargo make appendix`编译，将编译好的文件移动到客户端的`./libs/appendix.exe`
-4. 后续步骤参考[基本使用方法](#基本使用方法链接钓鱼)
+4. `./client.exe --send-all --appendix-exe`: 发送携带exe的钓鱼邮件
 
 # 注意事项
 ## 重要文件
@@ -190,6 +191,9 @@ cargo build --release -p server
 - [x] 外部config
 - [x] 替换unwrap，确保稳定性
 - [x] 附件钓鱼功能(exe)
+- [ ] exe自动加图标
+- [ ] exe自动打包zip
+- [ ] 钓鱼链接特征可控化
 - [ ] 附件钓鱼功能(zip)
 - [ ] 附件钓鱼功能(lnk)
 - [ ] zip & random_password

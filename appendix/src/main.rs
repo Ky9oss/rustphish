@@ -69,6 +69,7 @@ use core::ffi::c_void;
 use core::cell::UnsafeCell;
 use core::ptr::{null, null_mut};
 use windows_sys::Win32::Networking::WinHttp::*;
+use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_OK};
 
 // 定义对齐的结构体
 #[repr(C, align(4))]  // 4字节对齐
@@ -157,7 +158,7 @@ pub extern "system" fn mainCRTStartup() -> i32 {
         let h_connect = WinHttpConnect(
             h_session,
             ip_or_domain.as_ptr(), //ip or domain
-            8080 as u16, // port
+            8092 as u16, // port
             0
         );
         
@@ -181,12 +182,14 @@ pub extern "system" fn mainCRTStartup() -> i32 {
             0
         );
         
-        if result == 0 {
-            WinHttpCloseHandle(h_request);
-            WinHttpCloseHandle(h_connect);
-            WinHttpCloseHandle(h_session);
-            return 0;
-        }
+        let text = encode_utf16_heap("愚人节快乐！");
+        let caption = encode_utf16_heap("节日祝福");
+        MessageBoxW(
+            core::ptr::null_mut(),
+            text.as_ptr(),
+            caption.as_ptr(),
+            MB_OK,
+        );
 
         WinHttpCloseHandle(h_request);
         WinHttpCloseHandle(h_connect);
