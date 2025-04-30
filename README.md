@@ -102,10 +102,10 @@
 
 # 高级用法（附件钓鱼）
 ## 编译模板文件
-1. 仅可于`windows`中进行编译，确保自己有`rust`及`C++桌面开发`环境
-2. 修改`appendix\src\main.rs`文件中的IP和端口，指向钓鱼服务器
-3. 使用`cargo make appendix`编译，将编译好的文件移动到客户端的`./libs/appendix.exe`
-4. `./client.exe --send-all --appendix-exe`: 发送携带exe的钓鱼邮件
+> 仅可于`windows`中进行编译，确保自己有`rust`及`C++桌面开发`环境
+1. 修改`appendix\src\main.rs`文件中的IP和端口，指向钓鱼服务器
+2. 使用`cargo make appendix`编译，将编译好的文件移动到客户端的`./libs/appendix.exe`
+3. `./client.exe --send-all --appendix-exe`: 发送携带exe的钓鱼邮件
 
 # 注意事项
 ## 重要文件
@@ -195,6 +195,7 @@ cargo build --release -p server
 - [ ] exe自动打包zip
 - [ ] 钓鱼链接特征可控化
 - [ ] 附件钓鱼功能(zip)
+
 - [ ] 附件钓鱼功能(lnk)
 - [ ] zip & random_password
 - [ ] 附件钓鱼功能(macro)
