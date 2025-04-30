@@ -102,7 +102,7 @@ Download `client` and `server` from the `Releases` section on the right side of 
 ## Compile Template Files
 1. Can only be compiled in `windows`, ensure you have `rust` and `C++ desktop development` environment
 2. Modify the IP and port in the `appendix\src\main.rs` file to point to the phishing server
-3. Use `cargo make appendix` to compile
+3. Use `cargo make appendix` to compile and move it to `./libs/appendix.exe`
 4. Follow the steps in [Basic Usage](#basic-usage-link-phishing)
 
 # Notes

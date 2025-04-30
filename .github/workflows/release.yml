@@ -6,8 +6,8 @@ on:
       - "v*"
 
 env:
-  RUST_TOOLCHAIN: stable
-  CARGO_MAKE_VERSION: 0.36.23
+  RUST_TOOLCHAIN: nightly
+  CARGO_MAKE_VERSION: 0.37.23
 
 jobs:
   build:

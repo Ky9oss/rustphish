@@ -11,4 +11,7 @@ interval = 5
 
 [email]
 template = "template.html"
-appendix_name = "xxx"
+original_appendix_path_exe = "./appendix.exe"
+appendix_name_for_sending_exe = "xxx"
+appendix_name_for_sending_lnk = "xxx"
+zip_name = "xxx"

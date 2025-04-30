@@ -44,7 +44,9 @@ struct ServerConfig {
 #[derive(Deserialize)]
 struct EmailConfig {
     template: String, // 邮件模板路径
-    appendix_name: String, //附件木马的文件名
+    original_appendix_path_exe: String,
+    appendix_name_for_sending_exe: String, //附件木马的文件名
+    appendix_name_for_sending_lnk: String, 
 }
 
 const BANNER: &str = r#"
@@ -108,16 +110,36 @@ async fn send_multi_emails(
     password: String,
     from: u16,
     to: u16,
-    is_appendix: bool
+    is_exe_appendix: bool,
+    is_lnk_appendix: bool
 ) -> Result<(), Box<dyn Error>> {
-    let appendix_name: &str = match is_appendix {
+    let appendix_name_for_sending_exe: &str = match is_exe_appendix {
         true => {
-            &config.email.appendix_name
+            &config.email.appendix_name_for_sending_exe
         }
         false => {
             ""
         }
     }; 
+
+    let template_exe_path: &str = match is_exe_appendix {
+        true => {
+            &config.email.original_appendix_path_exe
+        }
+        false => {
+            ""
+        }
+    }; 
+
+    let appendix_name_for_sending_lnk: &str = match is_lnk_appendix {
+        true => {
+            &config.email.appendix_name_for_sending_lnk
+        }
+        false => {
+            ""
+        }
+    }; 
+
 
     let emails = db::get_all_emails(&email_tree)?;
     let end = std::cmp::min(to, emails.len().try_into().unwrap());
@@ -138,6 +160,7 @@ async fn send_multi_emails(
         // let content = template.replace("{{id}}", &entry.id);
         let index_url = format!("http://{}:{}/index/{}", &config.server.ip_or_domain, &config.server.port, &entry.id);
         let image_url = format!("http://{}:{}/image/{}", &config.server.ip_or_domain, &config.server.port, &entry.id);
+        let server_url = format!("http://{}:{}", &config.server.ip_or_domain, &config.server.port);
 
         let content = template.replace("{{index}}", &index_url);
         let content = content.replace("{{image}}", &image_url);
@@ -158,11 +181,13 @@ async fn send_multi_emails(
             &config.smtp.from_email,
             &config.smtp.username,
             &password,
-            appendix_name,
-            &index_url,
+            template_exe_path,
+            &server_url,
             &entry.id,
+            appendix_name_for_sending_exe,
+            appendix_name_for_sending_lnk,
         ) {
-            Ok(result) => print_success(&format!("发送成功: {}", entry.email)),
+            Ok(_) => print_success(&format!("发送成功: {}", entry.email)),
             Err(e) => print_error(&format!("发送失败 {}: {}", entry.email, e)),
         }
 
@@ -184,16 +209,37 @@ async fn send_phishing_emails(
     email_tree: &sled::Tree,
     config: ClientConfig,
     password: String,
-    is_appendix: bool
+    is_exe_appendix: bool,
+    is_lnk_appendix: bool,
 ) -> Result<(), Box<dyn Error>> {
-    let appendix_name: &str = match is_appendix {
+    let appendix_name_for_sending_exe: &str = match is_exe_appendix {
         true => {
-            &config.email.appendix_name
+            &config.email.appendix_name_for_sending_exe
         }
         false => {
             ""
         }
     }; 
+
+    let template_exe_path: &str = match is_exe_appendix {
+        true => {
+            &config.email.original_appendix_path_exe
+        }
+        false => {
+            ""
+        }
+    }; 
+
+    let appendix_name_for_sending_lnk: &str = match is_lnk_appendix {
+        true => {
+            &config.email.appendix_name_for_sending_lnk
+        }
+        false => {
+            ""
+        }
+    }; 
+
+
     let emails = db::get_all_emails(&email_tree)?;
 
     print_info(&format!("找到 {} 个目标邮箱", emails.len()));
@@ -211,6 +257,7 @@ async fn send_phishing_emails(
         // let content = template.replace("{{id}}", &entry.id);
         let index_url = format!("http://{}:{}/index/{}", &config.server.ip_or_domain, &config.server.port, &entry.id);
         let image_url = format!("http://{}:{}/image/{}", &config.server.ip_or_domain, &config.server.port, &entry.id);
+        let server_url = format!("http://{}:{}", &config.server.ip_or_domain, &config.server.port);
 
         let content = template.replace("{{index}}", &index_url);
         let content = content.replace("{{image}}", &image_url);
@@ -231,11 +278,13 @@ async fn send_phishing_emails(
             &config.smtp.from_email,
             &config.smtp.username,
             &password,
-            appendix_name,
-            &index_url,
+            template_exe_path,
+            &server_url,
             &entry.id,
+            appendix_name_for_sending_exe,
+            appendix_name_for_sending_lnk,
         ) {
-            Ok(result) => print_success(&format!("发送成功: {}", entry.email)),
+            Ok(_) => print_success(&format!("发送成功: {}", entry.email)),
             Err(e) => print_error(&format!("发送失败 {}: {}", entry.email, e)),
         }
 
@@ -280,16 +329,36 @@ async fn send_single_email(
     config: &ClientConfig,
     target_id: &str,
     password: &str,
-    is_appendix: bool,
+    is_exe_appendix: bool,
+    is_lnk_appendix: bool,
 ) -> Result<(), Box<dyn Error>> {
-    let appendix_name: &str = match is_appendix {
+    let appendix_name_for_sending_exe: &str = match is_exe_appendix {
         true => {
-            &config.email.appendix_name
+            &config.email.appendix_name_for_sending_exe
         }
         false => {
             ""
         }
     }; 
+
+    let template_exe_path: &str = match is_exe_appendix {
+        true => {
+            &config.email.original_appendix_path_exe
+        }
+        false => {
+            ""
+        }
+    }; 
+
+    let appendix_name_for_sending_lnk: &str = match is_lnk_appendix {
+        true => {
+            &config.email.appendix_name_for_sending_lnk
+        }
+        false => {
+            ""
+        }
+    }; 
+
     // 查找目标邮箱
     match email_tree.get(target_id.as_bytes())? {
         Some(value) => {
@@ -297,6 +366,7 @@ async fn send_single_email(
             let template = fs::read_to_string(&config.email.template)?;
             let index_url = format!("http://{}:{}/index/{}", &config.server.ip_or_domain, &config.server.port, &entry.id);
             let image_url = format!("http://{}:{}/image/{}", &config.server.ip_or_domain, &config.server.port, &entry.id);
+            let server_url = format!("http://{}:{}", &config.server.ip_or_domain, &config.server.port);
 
             let content = template.replace("{{index}}", &index_url);
             let content = content.replace("{{image}}", &image_url);
@@ -317,9 +387,11 @@ async fn send_single_email(
                 &config.smtp.from_email,
                 &config.smtp.username,
                 password,
-                appendix_name,
-                &index_url,
+                template_exe_path,
+                &server_url,
                 &entry.id,
+                appendix_name_for_sending_exe,
+                appendix_name_for_sending_lnk,
             ) {
                 Ok(_) => print_success(&format!("发送成功: {}", entry.email)),
                 Err(e) => print_error(&format!("发送失败 {}: {}", entry.email, e)),
@@ -414,9 +486,21 @@ fn main() -> Result<(), Box<dyn Error>> {
                     .help("发送邮件区间"),
             )
             .arg(
-                Arg::new("appendix")
-                    .long("appendix")
-                    .help("使用附件钓鱼")
+                Arg::new("appendix-exe")
+                    .long("appendix-exe")
+                    .help("使用exe附件钓鱼")
+                    .num_args(0),
+            )
+            .arg(
+                Arg::new("appendix-lnk")
+                    .long("appendix-lnk")
+                    .help("使用lnk附件钓鱼")
+                    .num_args(0),
+            )
+            .arg(
+                Arg::new("zip")
+                    .long("zip")
+                    .help("使用zip附件钓鱼")
                     .num_args(0),
             )
     }
@@ -550,14 +634,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             print_info("请输入SMTP密码：");
             let password = read_password()?;
 
+            let is_exe_appendix = matches.get_flag("appendix-exe");             
+            let is_lnk_appendix = matches.get_flag("appendix-lnk");
             print_info("开始批量发送邮件");
+
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(async {
-                if matches.get_flag("appendix") {
-                    send_phishing_emails(&email_tree, config, password, true).await?;
-                }else {
-                    send_phishing_emails(&email_tree, config, password, false).await?;
-                }
+                    send_phishing_emails(&email_tree, config, password, is_exe_appendix, is_lnk_appendix).await?;
                 Ok::<(), Box<dyn Error>>(())
             })?;
             print_success("所有邮件发送完成");
@@ -582,15 +665,15 @@ fn main() -> Result<(), Box<dyn Error>> {
             print_info("请输入SMTP密码：");
             let password = read_password()?;
 
+            let is_exe_appendix = matches.get_flag("appendix-exe");             
+            let is_lnk_appendix = matches.get_flag("appendix-lnk");
+            print_info("开始批量发送邮件");
+
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(async {
-            if matches.get_flag("appendix") {
-                    send_single_email(&email_tree, &config, target_id, &password, true).await?;
-                }else {
-                    send_single_email(&email_tree, &config, target_id, &password, false).await?;
-                }
+                    send_single_email(&email_tree, &config, target_id, &password, is_exe_appendix, is_lnk_appendix).await?;
                 Ok::<(), Box<dyn Error>>(())
-            });
+            })?;
 
         } else if let Some(ft) = matches.get_one::<String>("send-from-to") {
             // 检查配置文件
@@ -617,16 +700,15 @@ fn main() -> Result<(), Box<dyn Error>> {
             let from = from_to[0];
             let to = from_to[1];
 
+            let is_exe_appendix = matches.get_flag("appendix-exe");             
+            let is_lnk_appendix = matches.get_flag("appendix-lnk");
+            print_info("开始批量发送邮件");
+
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(async {
-                if matches.get_flag("appendix") {
-                    send_multi_emails(&email_tree, config, password, from, to, true).await?;
-                }
-                else{
-                    send_multi_emails(&email_tree, config, password, from, to, false).await?;
-                }
+                    send_multi_emails(&email_tree, config, password, from, to, is_exe_appendix, is_lnk_appendix).await?;
                 Ok::<(), Box<dyn Error>>(())
-            });
+            })?;
         } 
     }
 
@@ -642,7 +724,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
     use std::io::Write;
     use tempfile::NamedTempFile;
 
