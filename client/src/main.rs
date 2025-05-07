@@ -16,6 +16,9 @@ mod smtp;
 #[cfg(feature = "mail")]
 pub mod malware;
 
+#[cfg(feature = "mail")]
+pub mod qr;
+
 #[cfg(feature = "db")]
 mod db;
 
@@ -165,6 +168,15 @@ async fn send_multi_emails(
         let content = template.replace("{{index}}", &index_url);
         let content = content.replace("{{image}}", &image_url);
 
+        let content = if content.contains("{{qrcode}}") {
+            let qrimg = qr::generate_qrcode_html(&index_url)?;
+            let content = content.replace("{{qrcode}}", &qrimg);
+            print_success(&format!("生成二维码成功(ID: {})", entry.id));
+            content
+        } else {
+            content
+        };
+
         // 创建临时文件存储当前邮件内容
         let temp_dir = Path::new("./temp");
         create_dir_all(temp_dir)?;
@@ -262,6 +274,15 @@ async fn send_phishing_emails(
         let content = template.replace("{{index}}", &index_url);
         let content = content.replace("{{image}}", &image_url);
 
+        let content = if content.contains("{{qrcode}}") {
+            let qrimg = qr::generate_qrcode_html(&index_url)?;
+            let content = content.replace("{{qrcode}}", &qrimg);
+            print_success(&format!("生成二维码成功(ID: {})", entry.id));
+            content
+        } else {
+            content
+        };
+
         // 创建临时文件存储当前邮件内容
         let temp_dir = Path::new("./temp");
         create_dir_all(temp_dir)?;
@@ -297,28 +318,6 @@ async fn send_phishing_emails(
 
     // 清理临时目录
     fs::remove_dir("./temp")?;
-
-    Ok(())
-}
-
-fn show_all_emails(email_tree: &sled::Tree) -> Result<(), Box<dyn Error>> {
-    let emails = db::get_all_emails(email_tree)?;
-
-    if emails.is_empty() {
-        print_info("数据库中没有邮箱记录");
-        return Ok(());
-    }
-
-    print_success(&format!("共找到 {} 个邮箱", emails.len()));
-
-    println!("\n{:=^50}", " 邮箱列表 ");
-    println!("{:<15} {}", "ID", "邮箱地址");
-    println!("{:-<50}", "");
-
-    for entry in emails {
-        println!("{:<15} {}", entry.id, entry.email);
-    }
-    println!("{:=^50}\n", "");
 
     Ok(())
 }
@@ -371,6 +370,16 @@ async fn send_single_email(
             let content = template.replace("{{index}}", &index_url);
             let content = content.replace("{{image}}", &image_url);
 
+            let content = if content.contains("{{qrcode}}") {
+                let qrimg = qr::generate_qrcode_html(&index_url)?;
+                let content = content.replace("{{qrcode}}", &qrimg);
+                print_success(&format!("生成二维码成功(ID: {})", entry.id));
+                content
+            } else {
+                content
+            };
+
+
             // 创建临时文件
             let temp_dir = Path::new("./temp");
             create_dir_all(temp_dir)?;
@@ -409,6 +418,28 @@ async fn send_single_email(
             )))
         }
     }
+}
+
+fn show_all_emails(email_tree: &sled::Tree) -> Result<(), Box<dyn Error>> {
+    let emails = db::get_all_emails(email_tree)?;
+
+    if emails.is_empty() {
+        print_info("数据库中没有邮箱记录");
+        return Ok(());
+    }
+
+    print_success(&format!("共找到 {} 个邮箱", emails.len()));
+
+    println!("\n{:=^50}", " 邮箱列表 ");
+    println!("{:<15} {}", "ID", "邮箱地址");
+    println!("{:-<50}", "");
+
+    for entry in emails {
+        println!("{:<15} {}", entry.id, entry.email);
+    }
+    println!("{:=^50}\n", "");
+
+    Ok(())
 }
 
 
@@ -777,83 +808,37 @@ template = "template.html"
         assert!(true); // 如果打印没有panic就算通过
     }
 
-    // 测试生成钓鱼邮件
-    // #[test]
-    // fn test_generate_phishing_emails() -> Result<(), Box<dyn Error>> {
-    //     let (db, tree) = setup_test_db()?;
-    //     let template = create_test_template()?;
+    #[cfg(feature = "mail")]
+    use qrcode::QrCode;
 
-    //     // 确保generate目录不存在
-    //     let _ = fs::remove_dir_all("./generate");
+    #[cfg(feature = "mail")]
+    use image::Luma;
 
-    //     generate_phishing_emails(&tree, template.path().to_str().unwrap())?;
+    #[cfg(feature = "mail")]
+    #[test]
+    fn test_qrcode() {
+        let url = "https://baidu.com/";
+        
+        // 转换为字节数据（使用 as_bytes()）
+        let code = QrCode::new(url.as_bytes()).unwrap();
 
-    //     // 验证生成的文件
-    //     let generated_file = fs::read_to_string("./generate/test1@example.com.html")?;
-    //     assert!(generated_file.contains("ID: test1"));
+        // 生成并保存图片
+        let image = code.render::<Luma<u8>>()
+            .quiet_zone(false)       // 是否保留空白边距
+            .min_dimensions(300, 300) // 最小尺寸
+            .build();
+        image.save("qrcode.png").unwrap();
+        assert!(true);
+    }
 
-    //     // 清理
-    //     fs::remove_dir_all("./generate")?;
-    //     fs::remove_dir_all("test_email_database")?;
-    //     Ok(())
-    // }
-
-    // // 测试发送钓鱼邮件
-    // #[tokio::test]
-    // async fn test_send_phishing_emails() -> Result<(), Box<dyn Error>> {
-    //     let (db, tree) = setup_test_db()?;
-    //     let config_file = create_test_config()?;
-
-    //     let config: ClientConfig = toml::from_str(&fs::read_to_string(config_file.path())?)?;
-
-    //     // 使用无效的凭证测试（应该返回错误）
-    //     let result = send_phishing_emails(&tree, config, "invalid_password".to_string()).await;
-    //     assert!(result.is_err());
-
-    //     // 清理
-    //     fs::remove_dir_all("test_email_database")?;
-    //     Ok(())
-    // }
-
-    // // 测试配置文件解析
-    // #[test]
-    // fn test_config_parsing() -> Result<(), Box<dyn Error>> {
-    //     let config_file = create_test_config()?;
-    //     let config: ClientConfig = toml::from_str(&fs::read_to_string(config_file.path())?)?;
-
-    //     assert_eq!(config.smtp.server, "smtp.126.com");
-    //     assert_eq!(config.smtp.username, "test@126.com");
-    //     assert_eq!(config.smtp.interval, 1);
-    //     assert_eq!(config.email.template, "template.html");
-
-    //     Ok(())
-    // }
-
-    // // 添加显示邮箱列表的测试
-    // #[test]
-    // fn test_show_all_emails() -> Result<(), Box<dyn Error>> {
-    //     let (db, tree) = setup_test_db()?;
-
-    //     // 添加多个测试邮箱
-    //     let entries = vec![
-    //         db::EmailEntry {
-    //             id: "test1".to_string(),
-    //             email: "test1@example.com".to_string(),
-    //         },
-    //         db::EmailEntry {
-    //             id: "test2".to_string(),
-    //             email: "test2@example.com".to_string(),
-    //         },
-    //     ];
-
-    //     for entry in &entries {
-    //         tree.insert(entry.id.as_bytes(), bincode::serialize(entry)?)?;
-    //     }
-
-    //     show_all_emails(&tree)?;
-
-    //     // 清理
-    //     fs::remove_dir_all("test_email_database")?;
-    //     Ok(())
-    // }
+    #[cfg(feature = "mail")]
+    #[test]
+    fn test_qrcode_html() {
+        let html_img = qr::generate_qrcode_html("https://baidu.com/")
+            .expect("生成二维码失败");
+        
+        println!("直接嵌入HTML的用法：");
+        println!("<img src=\"{}\" alt=\"QR Code\"/>", html_img);
+        assert!(true);
+    }
 }

@@ -26,6 +26,9 @@ tokio = { version = "1.0", features = ["full"], optional = true }
 mime = { version = "0.3", optional = true }
 mime_guess = { version = "2.0.5", optional = true }
 percent-encoding = { version = "2.3.1", optional = true}
+qrcode = { version = "0.14.1", optional = true}
+image = { version = "0.25.6", optional = true}
+base64 = { version = "0.22.1", optional = true}
 
 # 开发环境依赖
 [dev-dependencies]
@@ -37,4 +40,4 @@ criterion = "0.5"
 [features]
 default = ["db"]
 db = ["dep:sled", "dep:bincode", "dep:zerocopy", "dep:rand"]
-mail = ["db", "dep:lettre", "dep:toml", "dep:rpassword", "dep:tokio", "dep:mime_guess", "dep:mime", "dep:percent-encoding"]
+mail = ["db", "dep:lettre", "dep:toml", "dep:rpassword", "dep:tokio", "dep:mime_guess", "dep:mime", "dep:percent-encoding", "dep:qrcode", "dep:image", "dep:base64"]
