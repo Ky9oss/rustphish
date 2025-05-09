@@ -1,6 +1,7 @@
 [server]
 ip = "0.0.0.0"
 port = 8080
+is_ssl = true
 
 [paths]
 phish_page = "./frontend/test.html"

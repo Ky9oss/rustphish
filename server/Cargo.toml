@@ -11,10 +11,10 @@ toml = { version = "0.8"}
 serde = { version = "1.0", features = ["derive"] }
 futures = "0.3"
 tokio = { version = "1", features = ["full"] }
-# tokio-rustls = { version = "0.25.0"}
-# pki-types = { package = "rustls-pki-types", version = "1" }
+tokio-rustls = { version = "0.25.0"}
+pki-types = { package = "rustls-pki-types", version = "1" }
 webpki-roots = "0.26"
-# rustls-pemfile = "2"
+rustls-pemfile = "2"
 zerocopy = "0.6.0"
 byteorder = "1.4.3"
 bytes = "1.0"
@@ -31,7 +31,7 @@ actix-ws = "0.2.5"
 env_logger = "0.11"
 log = "0.4"
 sled = "0.34.7"
-# rustls = { version = "0.23", default-features = false, features = ["ring", "tls12", "std"]}
+rustls = { version = "0.23", default-features = false, features = ["ring", "tls12", "std"]}
 chrono = "0.4.39"
 shared = { path = "../shared" }
 urlencoding = "2.1.0"

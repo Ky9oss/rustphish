@@ -2,7 +2,11 @@ use actix_web::{http::StatusCode, post, web, App, HttpRequest, HttpResponse, Htt
 use serde::Deserialize;
 use actix_cors::Cors;
 use std::io;
+use std::io::BufReader;
+use std::fs::File;
 use std::env;
+use rustls_pemfile::{certs, pkcs8_private_keys};
+use rustls::{ pki_types::PrivateKeyDer, ServerConfig as ServerConfigRustls };
 use actix_web::middleware::Logger;
 use std::sync::{Arc, Mutex};
 use sled;
@@ -31,6 +35,7 @@ pub struct ServerConfig {
 pub struct Server {
     pub ip: String,
     pub port: u16,
+    pub is_ssl: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -76,7 +81,6 @@ async fn main() -> io::Result<()> {
         io::Error::new(io::ErrorKind::Other, "Data tree initialization failed")
     })?);
 
-    // 配置加载
     let config = ServerConfig::load().map_err(|e| {
         log::error!("Failed to load server_config: {}", e);
         io::Error::new(io::ErrorKind::Other, "Configuration loading failed")
@@ -90,29 +94,56 @@ async fn main() -> io::Result<()> {
     let image_path = "/image/{id}";
     let appendix_path = "/appendix/{id}";
 
-    // 4. 服务器启动
-    HttpServer::new(move || {
-        let cors = Cors::permissive();
-        App::new()
-            .wrap(cors)
-            .wrap(Logger::default())
-            .app_data(web::Data::new(ActionTree(Arc::clone(&action_tree))))
-            .app_data(web::Data::new(DataTree(Arc::clone(&data_tree))))
-            .app_data(web::Data::new(config.clone()))
-            .route(&submit_path, web::post().to(handle_post))
-            .route(&index_path, web::get().to(handle_index))
-            .route(&image_path, web::get().to(handle_image))
-            .route(&appendix_path, web::get().to(handle_appendix))
-            .route("/success", web::get().to(handle_success))
-    })
-    .bind(&bind_addr).map_err(|e| {
-        log::error!("Failed to bind server to {}: {}", bind_addr, e);
-        e
-    })?
-    .workers(2)
-    .run()
-    .await
+    if config.server.is_ssl {
+        HttpServer::new(move || {
+            let cors = Cors::permissive();
+            App::new()
+                .wrap(cors)
+                .wrap(Logger::default())
+                .app_data(web::Data::new(ActionTree(Arc::clone(&action_tree))))
+                .app_data(web::Data::new(DataTree(Arc::clone(&data_tree))))
+                .app_data(web::Data::new(config.clone()))
+                .route(&submit_path, web::post().to(handle_post))
+                .route(&index_path, web::get().to(handle_index))
+                .route(&image_path, web::get().to(handle_image))
+                .route(&appendix_path, web::get().to(handle_appendix))
+                .route("/success", web::get().to(handle_success))
+        })
+        .bind(&bind_addr).map_err(|e| {
+            log::error!("Failed to bind server to {}: {}", bind_addr, e);
+            e
+        })?
+        .workers(2)
+        .run()
+        .await
+        
+    }else {
+        let tls_config = rustls_tls_config("certs/fullchain.pem", "certs/privkey.pem").unwrap();
+
+        HttpServer::new(move || {
+            let cors = Cors::permissive();
+            App::new()
+                .wrap(cors)
+                .wrap(Logger::default())
+                .app_data(web::Data::new(ActionTree(Arc::clone(&action_tree))))
+                .app_data(web::Data::new(DataTree(Arc::clone(&data_tree))))
+                .app_data(web::Data::new(config.clone()))
+                .route(&submit_path, web::post().to(handle_post))
+                .route(&index_path, web::get().to(handle_index))
+                .route(&image_path, web::get().to(handle_image))
+                .route(&appendix_path, web::get().to(handle_appendix))
+                .route("/success", web::get().to(handle_success))
+        })
+        .bind_rustls_0_23(&bind_addr, tls_config).map_err(|e| {
+            log::error!("Failed to bind server to {}: {}", bind_addr, e);
+            e
+        })?
+        .workers(2)
+        .run()
+        .await
+    }
 }
+
 
 async fn handle_index(
     req: HttpRequest, 
@@ -437,4 +468,19 @@ async fn handle_success(
             HttpResponse::InternalServerError().body("Error loading page")
         }
     }
+}
+
+fn rustls_tls_config(cert_path: &str, key_path: &str) -> Result<ServerConfigRustls> {
+    let cert_file = &mut BufReader::new(File::open(cert_path)?);
+    let cert_chain = certs(cert_file).collect::<Result<Vec<_>, _>>()?;
+    
+    let key_file = &mut BufReader::new(File::open(key_path)?);
+    let mut keys = pkcs8_private_keys(key_file).collect::<Result<Vec<_>, _>>()?;
+
+    let config = ServerConfigRustls::builder()
+        .with_no_client_auth() // 禁用客户端认证
+        .with_single_cert(cert_chain, PrivateKeyDer::Pkcs8(keys.remove(0)))
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+
+    Ok(config)
 }
