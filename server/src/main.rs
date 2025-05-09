@@ -43,6 +43,8 @@ pub struct Paths {
     pub phish_page: String,
     pub redirect_url: String,
     pub success_page: String,
+    pub ssl_cert: String,
+    pub ssl_key: String,
 }
 
 impl ServerConfig {
@@ -94,7 +96,7 @@ async fn main() -> io::Result<()> {
     let image_path = "/image/{id}";
     let appendix_path = "/appendix/{id}";
 
-    if config.server.is_ssl {
+    if !(config.server.is_ssl) {
         HttpServer::new(move || {
             let cors = Cors::permissive();
             App::new()
@@ -118,7 +120,7 @@ async fn main() -> io::Result<()> {
         .await
         
     }else {
-        let tls_config = rustls_tls_config("certs/fullchain.pem", "certs/privkey.pem").unwrap();
+        let tls_config = rustls_tls_config(config.server.ssl_cert, config.server.ssl_key).unwrap();
 
         HttpServer::new(move || {
             let cors = Cors::permissive();

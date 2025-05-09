@@ -42,6 +42,7 @@ struct SmtpConfig {
 struct ServerConfig {
     ip_or_domain: String, // 邮件模板路径
     port: u16, //附件木马的文件名
+    is_ssl: bool,
 }
 
 #[derive(Deserialize)]
@@ -92,8 +93,14 @@ fn generate_phishing_emails(
     print_info(&format!("找到 {} 个目标邮箱", emails.len()));
 
     for entry in emails {
-        let index_url = format!("http://{}:{}/index/{}", &config.server.ip_or_domain, &config.server.port, &entry.id);
-        let image_url = format!("http://{}:{}/image/{}", &config.server.ip_or_domain, &config.server.port, &entry.id);
+        let index_url = match config.server.is_ssl {
+            true => format!("https://{}:{}/index/{}", &config.server.ip_or_domain, &config.server.port, &entry.id),
+            false => format!("http://{}:{}/index/{}", &config.server.ip_or_domain, &config.server.port, &entry.id),
+        };
+        let image_url = match config.server.is_ssl {
+            true => format!("https://{}:{}/image/{}", &config.server.ip_or_domain, &config.server.port, &entry.id),
+            false => format!("http://{}:{}/image/{}", &config.server.ip_or_domain, &config.server.port, &entry.id),
+        };
 
         let content = template.replace("{{index}}", &index_url);
         let content = content.replace("{{image}}", &image_url);
@@ -161,9 +168,18 @@ async fn send_multi_emails(
     // 发送邮件
     for entry in new_emails {
         // let content = template.replace("{{id}}", &entry.id);
-        let index_url = format!("http://{}:{}/index/{}", &config.server.ip_or_domain, &config.server.port, &entry.id);
-        let image_url = format!("http://{}:{}/image/{}", &config.server.ip_or_domain, &config.server.port, &entry.id);
-        let server_url = format!("http://{}:{}", &config.server.ip_or_domain, &config.server.port);
+        let index_url = match config.server.is_ssl {
+            true => format!("https://{}:{}/index/{}", &config.server.ip_or_domain, &config.server.port, &entry.id),
+            false => format!("http://{}:{}/index/{}", &config.server.ip_or_domain, &config.server.port, &entry.id),
+        };
+        let image_url = match config.server.is_ssl {
+            true => format!("https://{}:{}/image/{}", &config.server.ip_or_domain, &config.server.port, &entry.id),
+            false => format!("http://{}:{}/image/{}", &config.server.ip_or_domain, &config.server.port, &entry.id),
+        };
+        let server_url = match config.server.is_ssl {
+            true => format!("https://{}:{}", &config.server.ip_or_domain, &config.server.port),
+            false => format!("http://{}:{}", &config.server.ip_or_domain, &config.server.port),
+        };
 
         let content = template.replace("{{index}}", &index_url);
         let content = content.replace("{{image}}", &image_url);
@@ -267,9 +283,19 @@ async fn send_phishing_emails(
     // 发送邮件
     for entry in emails {
         // let content = template.replace("{{id}}", &entry.id);
-        let index_url = format!("http://{}:{}/index/{}", &config.server.ip_or_domain, &config.server.port, &entry.id);
-        let image_url = format!("http://{}:{}/image/{}", &config.server.ip_or_domain, &config.server.port, &entry.id);
-        let server_url = format!("http://{}:{}", &config.server.ip_or_domain, &config.server.port);
+        let index_url = match config.server.is_ssl {
+            true => format!("https://{}:{}/index/{}", &config.server.ip_or_domain, &config.server.port, &entry.id),
+            false => format!("http://{}:{}/index/{}", &config.server.ip_or_domain, &config.server.port, &entry.id),
+        };
+        let image_url = match config.server.is_ssl {
+            true => format!("https://{}:{}/image/{}", &config.server.ip_or_domain, &config.server.port, &entry.id),
+            false => format!("http://{}:{}/image/{}", &config.server.ip_or_domain, &config.server.port, &entry.id),
+        };
+        let server_url = match config.server.is_ssl {
+            true => format!("https://{}:{}", &config.server.ip_or_domain, &config.server.port),
+            false => format!("http://{}:{}", &config.server.ip_or_domain, &config.server.port),
+        };
+
 
         let content = template.replace("{{index}}", &index_url);
         let content = content.replace("{{image}}", &image_url);
@@ -363,9 +389,18 @@ async fn send_single_email(
         Some(value) => {
             let entry: db::EmailEntry = bincode::deserialize(&value)?;
             let template = fs::read_to_string(&config.email.template)?;
-            let index_url = format!("http://{}:{}/index/{}", &config.server.ip_or_domain, &config.server.port, &entry.id);
-            let image_url = format!("http://{}:{}/image/{}", &config.server.ip_or_domain, &config.server.port, &entry.id);
-            let server_url = format!("http://{}:{}", &config.server.ip_or_domain, &config.server.port);
+            let index_url = match config.server.is_ssl {
+                true => format!("https://{}:{}/index/{}", &config.server.ip_or_domain, &config.server.port, &entry.id),
+                false => format!("http://{}:{}/index/{}", &config.server.ip_or_domain, &config.server.port, &entry.id),
+            };
+            let image_url = match config.server.is_ssl {
+                true => format!("https://{}:{}/image/{}", &config.server.ip_or_domain, &config.server.port, &entry.id),
+                false => format!("http://{}:{}/image/{}", &config.server.ip_or_domain, &config.server.port, &entry.id),
+            };
+            let server_url = match config.server.is_ssl {
+                true => format!("https://{}:{}", &config.server.ip_or_domain, &config.server.port),
+                false => format!("http://{}:{}", &config.server.ip_or_domain, &config.server.port),
+            };
 
             let content = template.replace("{{index}}", &index_url);
             let content = content.replace("{{image}}", &image_url);

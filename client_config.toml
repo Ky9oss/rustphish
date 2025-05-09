@@ -1,6 +1,7 @@
 [server]
 ip_or_domain = "teamserver.com"
 port = 80
+is_ssl = true
 
 [smtp]
 server = "smtp.126.com"

@@ -7,3 +7,5 @@ is_ssl = true
 phish_page = "./frontend/test.html"
 redirect_url = "http://localhost:8080/success"
 success_page = "./frontend/success.html"
+ssl_cert = "./certs/fullchain.pem"
+ssl_key = "./certs/privkey.pem"

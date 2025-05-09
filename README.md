@@ -152,11 +152,15 @@ rustphish依赖下列程序，请下载并添加至环境变量：
 [server]
 ip = "0.0.0.0" #服务端监听ip
 port = 8080 #服务端端口
+is_ssl = true
 
 [paths]
 phish_page = "./frontend/test.html" #仿冒页面路径
 redirect_url = "http://localhost:8080/success" #提交成功后，重定向的url
 success_page = "./frontend/success.html" #路由`/success`下的成功页面路径，可以用于`paths.redirect_url`重定向
+ssl_cert = "./certs/fullchain.pem" 
+ssl_key = "./certs/privkey.pem"
+
 ```
 
 ## client配置文件
@@ -164,6 +168,7 @@ success_page = "./frontend/success.html" #路由`/success`下的成功页面路�
 [server]
 ip_or_domain = "teamserver.com"
 port = 80
+is_ssl = true
 
 [smtp]
 server = "smtp.126.com" #smtp服务器地址
@@ -201,6 +206,7 @@ cargo build --release -p server
 - [x] 图片识别接口
 - [x] 配置文件化
 - [x] 无unwrap，确保稳定性
+- [x] https
 - [ ] ~~钓鱼链接特征可控化~~ (为配置文件引入额外的复杂度，不利于实际应用)
 
 ## 客户端
@@ -210,7 +216,6 @@ cargo build --release -p server
 - [x] smtp邮件发送
 - [x] 附件钓鱼功能(exe)
 - [x] 二维码钓鱼功能
-- [ ] https
 
 - [ ] exe自动加图标
 - [ ] exe自动打包zip
