@@ -32,7 +32,6 @@
   - [二、使用客户端发送钓鱼邮件](#二使用客户端发送钓鱼邮件)
   - [三、使用客户端读取服务端的数据库记录](#三使用客户端读取服务端的数据库记录)
 - [恶意文件钓鱼](#恶意文件钓鱼)
-  - [安装依赖](#安装依赖)
   - [编译模板文件](#编译模板文件)
 - [注意事项](#注意事项)
   - [重要文件](#重要文件)
@@ -102,11 +101,12 @@
 2. `./client.exe --read ./database`: 读取数据库记录（或使用`client_read.exe`）
 
 # 恶意文件钓鱼
-## 安装依赖
-rustphish依赖下列程序，请下载并添加至环境变量：
-- rcedit: [https://github.com/electron/rcedit]
+> 注意：目前该形式的钓鱼不适配服务器https模式
+~~## 安装依赖~~
+~~rustphish依赖下列程序，请下载并添加至环境变量：~~
+~~- rcedit: [https://github.com/electron/rcedit]~~
 ## 编译模板文件
-> 仅可于`windows`中进行编译，确保自己有`rust`及`C++桌面开发`环境
+> 注意：仅可于`windows`中进行编译，确保自己有`rust`及`C++桌面开发`环境
 1. 修改`appendix\src\main.rs`文件中的IP和端口，指向钓鱼服务器
 2. 使用`cargo make appendix`编译，将编译好的文件移动到客户端的`./libs/appendix.exe`
 3. `./client.exe --send-all --appendix-exe`: 发送携带exe的钓鱼邮件

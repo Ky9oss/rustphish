@@ -1,5 +1,13 @@
+[config]
+skip_core_tasks = true
+
 [env]
 CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+NIGHTLY_VERSION = "nightly-2025-02-14"
+TARGET_GNU = "x86_64-pc-windows-gnu"
+TARGET_GNU_x86 = "i686-pc-windows-gnu"
+RUSTFLAGS_GNU = "-C link-arg=-nostdlib -C codegen-units=1 -C link-arg=-fno-ident -C link-arg=-fpack-struct=8 -C link-arg=-Wl,--gc-sections -C link-arg=-falign-jumps=1 -C link-arg=-w -C link-arg=-falign-labels=1 -C link-arg=-Wl,-T./Linker.ld,--build-id=none -C link-arg=-Wl,-s,--no-seh,--enable-stdcall-fixup -C link-arg=-Wl,--subsystem,console -C link-arg=-nostartfiles"
+
 
 [tasks.clean]
 script_runner = "powershell"
@@ -38,6 +46,22 @@ dependencies = [
 [tasks.appendix]
 command = "cargo"
 args = ["build", "--release", "--target", "x86_64-pc-windows-msvc", "-p", "appendix"]
+
+[tasks.appendix-x86]
+command = "cargo"
+args = ["build", "--release", "--target", "i686-pc-windows-msvc", "-p", "appendix"]
+
+[tasks.appendix-gnu]
+description = "Builds the project for GNU target using custom Rust flags."
+command = "rustup"
+args = ["run", "${NIGHTLY_VERSION}-x86_64-pc-windows-gnu", "cargo", "rustc", "--target", "${TARGET_GNU}", "--release", "-p", "appendix"]
+env = { "RUSTFLAGS" = "${RUSTFLAGS_GNU}" }
+
+[tasks.appendix-gnu-x86]
+description = "Builds the project for GNU target using custom Rust flags."
+command = "rustup"
+args = ["run", "${NIGHTLY_VERSION}-i686-pc-windows-gnu", "cargo", "rustc", "--target", "${TARGET_GNU_x86}", "--release", "-p", "appendix"]
+env = { "RUSTFLAGS" = "${RUSTFLAGS_GNU}" }
 
 [tasks.server]
 command = "cargo"
