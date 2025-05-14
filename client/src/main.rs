@@ -6,6 +6,7 @@ use std::fs::{self, create_dir_all};
 use std::path::Path;
 use std::thread;
 use std::time::Duration;
+use std::sync::Arc;
 
 #[cfg(feature = "mail")]
 use rpassword::read_password;
@@ -123,37 +124,36 @@ async fn send_multi_emails(
     is_exe_appendix: bool,
     is_lnk_appendix: bool
 ) -> Result<(), Box<dyn Error>> {
-    let appendix_name_for_sending_exe: &str = match is_exe_appendix {
+    let appendix_name_for_sending_exe = match is_exe_appendix {
         true => {
-            &config.email.appendix_name_for_sending_exe
+            Arc::new(config.email.appendix_name_for_sending_exe.clone())
         }
         false => {
-            ""
+            Arc::new(String::from(""))
         }
     }; 
 
-    let template_exe_path: &str = match is_exe_appendix {
+    let template_exe_path = match is_exe_appendix {
         true => {
-            &config.email.original_appendix_path_exe
+            Arc::new(config.email.original_appendix_path_exe.clone())
         }
         false => {
-            ""
+            Arc::new(String::from(""))
         }
     }; 
 
-    let appendix_name_for_sending_lnk: &str = match is_lnk_appendix {
+    let appendix_name_for_sending_lnk = match is_lnk_appendix {
         true => {
-            &config.email.appendix_name_for_sending_lnk
+            Arc::new(config.email.appendix_name_for_sending_lnk.clone())
         }
         false => {
-            ""
+            Arc::new(String::from(""))
         }
     }; 
-
 
     let emails = db::get_all_emails(&email_tree)?;
     let end = std::cmp::min(to, emails.len().try_into().unwrap());
-    let new_emails = &emails[from as usize..end as usize];
+    let new_emails = emails[from as usize..end as usize].to_vec();
 
     print_info(&format!("找到 {} 个目标邮箱", new_emails.len()));
 
@@ -164,6 +164,9 @@ async fn send_multi_emails(
     print_info("验证SMTP凭证...");
     smtp::verify_smtp_credentials(&config.smtp.server, &config.smtp.username, &password)?;
     print_success("SMTP凭证验证成功");
+
+    let config = Arc::new(config);
+    let password = Arc::new(password.clone());
 
     // 发送邮件
     for entry in new_emails {
@@ -199,28 +202,38 @@ async fn send_multi_emails(
         let temp_file = format!("temp/{}.html", entry.id);
         fs::write(&temp_file, &content)?;
 
-        print_info(&format!("正在发送邮件到 {}", entry.email));
+        let config_clone = Arc::clone(&config);
+        let password = Arc::clone(&password);
+        let temp_file = temp_file.clone(); // 假设temp_file是生成的路径
+        let entry = entry.clone();
+        let appendix_name_for_sending_exe = Arc::clone(&appendix_name_for_sending_exe);
+        let appendix_name_for_sending_lnk = Arc::clone(&appendix_name_for_sending_lnk);
+        let template_exe_path = Arc::clone(&template_exe_path);
 
-        match smtp::send_html_email(
-            &config.smtp.server,
-            &temp_file,
-            &entry.email,
-            &config.smtp.subject,
-            &config.smtp.from_email,
-            &config.smtp.username,
-            &password,
-            template_exe_path,
-            &server_url,
-            &entry.id,
-            appendix_name_for_sending_exe,
-            appendix_name_for_sending_lnk,
-        ) {
-            Ok(_) => print_success(&format!("发送成功: {}", entry.email)),
-            Err(e) => print_error(&format!("发送失败 {}: {}", entry.email, e)),
-        }
+        std::thread::spawn(move || {
+            print_info(&format!("正在发送邮件到 {}", entry.email));
 
-        // 删除临时文件
-        fs::remove_file(&temp_file)?;
+            match smtp::send_html_email(
+                &config_clone.smtp.server,
+                &temp_file,
+                &entry.email,
+                &config_clone.smtp.subject,
+                &config_clone.smtp.from_email,
+                &config_clone.smtp.username,
+                &password,
+                &template_exe_path,
+                &server_url,
+                &entry.id,
+                &appendix_name_for_sending_exe,
+                &appendix_name_for_sending_lnk,
+            ) {
+                Ok(_) => print_success(&format!("发送成功: {}", entry.email)),
+                Err(e) => print_error(&format!("发送失败 {}: {}", entry.email, e)),
+            }
+
+            // 删除临时文件
+            fs::remove_file(&temp_file).unwrap_or(());
+        });
 
         // 等待指定时间间隔
         thread::sleep(Duration::from_secs(config.smtp.interval));
@@ -240,30 +253,30 @@ async fn send_phishing_emails(
     is_exe_appendix: bool,
     is_lnk_appendix: bool,
 ) -> Result<(), Box<dyn Error>> {
-    let appendix_name_for_sending_exe: &str = match is_exe_appendix {
+    let appendix_name_for_sending_exe = match is_exe_appendix {
         true => {
-            &config.email.appendix_name_for_sending_exe
+            Arc::new(config.email.appendix_name_for_sending_exe.clone())
         }
         false => {
-            ""
+            Arc::new(String::from(""))
         }
     }; 
 
-    let template_exe_path: &str = match is_exe_appendix {
+    let template_exe_path = match is_exe_appendix {
         true => {
-            &config.email.original_appendix_path_exe
+            Arc::new(config.email.original_appendix_path_exe.clone())
         }
         false => {
-            ""
+            Arc::new(String::from(""))
         }
     }; 
 
-    let appendix_name_for_sending_lnk: &str = match is_lnk_appendix {
+    let appendix_name_for_sending_lnk = match is_lnk_appendix {
         true => {
-            &config.email.appendix_name_for_sending_lnk
+            Arc::new(config.email.appendix_name_for_sending_lnk.clone())
         }
         false => {
-            ""
+            Arc::new(String::from(""))
         }
     }; 
 
@@ -279,6 +292,9 @@ async fn send_phishing_emails(
     print_info("验证SMTP凭证...");
     smtp::verify_smtp_credentials(&config.smtp.server, &config.smtp.username, &password)?;
     print_success("SMTP凭证验证成功");
+
+    let config = Arc::new(config);
+    let password = Arc::new(password.clone());
 
     // 发送邮件
     for entry in emails {
@@ -315,28 +331,38 @@ async fn send_phishing_emails(
         let temp_file = format!("temp/{}.html", entry.id);
         fs::write(&temp_file, &content)?;
 
-        print_info(&format!("正在发送邮件到 {}", entry.email));
+        let config_clone = Arc::clone(&config);
+        let password = Arc::clone(&password);
+        let temp_file = temp_file.clone(); // 假设temp_file是生成的路径
+        let entry = entry.clone();
+        let appendix_name_for_sending_exe = Arc::clone(&appendix_name_for_sending_exe);
+        let appendix_name_for_sending_lnk = Arc::clone(&appendix_name_for_sending_lnk);
+        let template_exe_path = Arc::clone(&template_exe_path);
 
-        match smtp::send_html_email(
-            &config.smtp.server,
-            &temp_file,
-            &entry.email,
-            &config.smtp.subject,
-            &config.smtp.from_email,
-            &config.smtp.username,
-            &password,
-            template_exe_path,
-            &server_url,
-            &entry.id,
-            appendix_name_for_sending_exe,
-            appendix_name_for_sending_lnk,
-        ) {
-            Ok(_) => print_success(&format!("发送成功: {}", entry.email)),
-            Err(e) => print_error(&format!("发送失败 {}: {}", entry.email, e)),
-        }
+        std::thread::spawn(move || {
+            print_info(&format!("正在发送邮件到 {}", entry.email));
 
-        // 删除临时文件
-        fs::remove_file(&temp_file)?;
+            match smtp::send_html_email(
+                &config_clone.smtp.server,
+                &temp_file,
+                &entry.email,
+                &config_clone.smtp.subject,
+                &config_clone.smtp.from_email,
+                &config_clone.smtp.username,
+                &password,
+                &template_exe_path,
+                &server_url,
+                &entry.id,
+                &appendix_name_for_sending_exe,
+                &appendix_name_for_sending_lnk,
+            ) {
+                Ok(_) => print_success(&format!("发送成功: {}", entry.email)),
+                Err(e) => print_error(&format!("发送失败 {}: {}", entry.email, e)),
+            }
+
+            // 删除临时文件
+            fs::remove_file(&temp_file).unwrap_or(());
+        });
 
         // 等待指定时间间隔
         thread::sleep(Duration::from_secs(config.smtp.interval));

@@ -8,7 +8,7 @@ use std::error::Error;
 use std::fs;
 use zerocopy::LayoutVerified;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EmailEntry {
     pub id: String,
     pub email: String,

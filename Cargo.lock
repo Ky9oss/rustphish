@@ -1012,9 +1012,9 @@ dependencies = [
 
 [[package]]
 name = "compiler_builtins"
-version = "0.1.149"
+version = "0.1.158"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5567db738d0fcdaaa007240b051c70aa7f0f08762e489ad1072298380eb3d84c"
+checksum = "164cdc689e4c6d69417f77a5f48be240c291e84fbef0b1281755dc754b19c809"
 
 [[package]]
 name = "constant_time_eq"
